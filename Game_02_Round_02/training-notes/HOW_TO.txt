@@ -1,0 +1,62 @@
+GAME 2 ROUND 2 - FOLDING (up to 100 points)
+===========================================
+24 Nov: NEW GRIP STYLE from episode 72 on (deeper grip, larger drop-off zone). Episodes 0-71 = old style.
+Train on 72+ only - see NEW_GRIP_START.txt.
+
+RULES (rulebook v0.8, section 5.8.1, updated 24 Nov)
+  - 4 square microfibre cloths, 30 x 30 cm (light blue, light green, light yellow, light pink), flat and fully unfolded,
+    side by side in NO specific order, each reachable by at least one arm. 5 minutes.
+  - Each cloth: fold in half (rectangle), then in half again along the longer side (about 15 x 15 cm). Same pattern for all 4.
+  - TARGET ZONE = the SOURCE AREA (the same black-taped rectangle as the other games). Folded cloths may sit next to each
+    other or stacked, and may be set aside to make room, but only cloths fully inside the area get placement points.
+  - BOTH arms must help on every cloth (grasp, align, tension, reposition, flatten); a one-arm cloth gets no full credit.
+  - 15 pts per correctly folded cloth (two clear folds, not twisted or crumpled) + up to 5 per cloth for edges within 20 mm
+    (3: 35 mm, 1: 50 mm). 5 pts per folded cloth fully in the zone. 10 pts for both arms.
+  - Time bonus 15 if ALL done in 90 s (10: 120, 5: 150, 1: 180). Components add to 125, score capped at 100.
+  - Penalties: -5 per cloth dropped fully outside its work area, -5 per cloth that unfolds within the 5 s check,
+    -10 if stacked so it cannot be judged, -10 for unsafe / uncontrolled motion (judges decide).
+  - 'Done' may only be declared when all 4 are folded and inside the zone; otherwise let the time run out.
+  - Strategy: 2-3 clean cloths beat 4 messy ones. Ignore the time bonus.
+
+RECORDING (RECORD.bat, 50 demos per run; target 100)
+  - up to 90-second demos (Right arrow when home), ONE cloth per demo, aim for 100.
+  - Both arms pinch the two near corners, fold away from the robot, re-grasp the short side, fold again,
+  - both arms drag the folded cloth into the target zone, both home.
+  - Rotate through all four colours and all four start spots. Have 0-3 folded cloths already in the zone.
+  - Put smooth tape on the gripper tips so the microfibre does not snag (rule 5.1.2.5).
+  - Start AND end every demo in the same rest pose, grippers open.
+  - Move smoothly at one steady speed, same strategy every time. One person does all demos of a task if possible.
+  - Left arrow = THROW AWAY this demo and redo it (use it on every sloppy one).
+  - Right arrow = end the demo early / skip the reset wait.   Esc = stop and save. NEVER close the window.
+
+TRAINING (TRAIN.bat)
+  - Trains on ALL demos recorded so far for this task, about 6-8 hours (overnight) on this laptop.
+  - Start it before bed, laptop on the charger. Do not run the robot while it trains (both use the graphics card).
+  - After a crash: ..\..\resume_train.bat fold
+
+RUNNING THE ROBOT (RUN.bat)
+  - The robot moves ON ITS OWN for the round's time. EMERGENCY STOP = Ctrl+C in the window, or the power switch.
+  - It uses the frozen model if there is one (..\..\freeze.bat fold), otherwise the newest.
+  - Test an older checkpoint:  RUN.bat 120 040000   (seconds, checkpoint step).
+  - RUN_PREV.bat = the PREVIOUS fold model (24 Nov new-grip 100k, before the overnight 200k one).
+    RUN_PREV.bat old = the 23 Nov old-grip 50k model. Add seconds after it: RUN_PREV.bat old 120.
+    RUN_PREV_FAST.bat = the 24 Nov 100k model at 45 Hz (1.5x); RUN_PREV_FAST.bat 40 = 1.33x.
+  - Plans are NOT averaged, so quick moves like opening the gripper go through (lesson from the other laptop).
+  - RUN_FAST.bat plays the moves 1.5x faster (control loop 45 Hz instead of 30). Good for time bonuses;
+    if it overshoots, drops things or spills, try  RUN_FAST.bat 40  (1.33x) or go back to RUN.bat.
+  - RUN_SMOOTH.bat averages plans instead: smoother, but slow to react. Compare both and keep the better one.
+  - In a scored run: hands off the keyboard after starting, Wi-Fi off, tell the judge 'done' as soon as it finishes.
+
+IF IT GOES WRONG
+  - Misses the corner -> more demos with the cloth slightly rotated or shifted.
+  - Jerky between plans -> try RUN_SMOOTH and compare.
+
+Check progress any time: ..\..\status.bat
+
+ADDED 23 NOV
+  - GRASP GUARD (on in every fold RUN button): before each gripper close the arm first settles on its target
+    (within 2 deg, max 1 s), then the gripper squeezes and the robot holds still 0.7 s before moving on.
+    The servos cannot feel the cloth, so this makes the grab land where the model aims; it cannot detect a miss.
+  - RUN_SEQ.bat [seconds per cloth] [cloths]: one model run per cloth, restarted automatically in between
+    (the model only learned one cloth per demo). Default 100 s x 3.
+  - RUN_LONG.bat: whole 100-step plans; use if RUN.bat stands still at the start.

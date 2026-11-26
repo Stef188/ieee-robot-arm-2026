@@ -1,0 +1,14 @@
+FOLD - NEW GRIP STYLE MARKER
+============================
+Set 24 Nov 2026 13:33, corrected 13:50: the new method starts at episode 72 (68-71 were still the old style).
+
+  ieee_fold episodes 0-71  = OLD style (0-67 recorded 23 Nov, 68-71 on 24 Nov): shallow grip, old (smaller) drop-off zone.
+  ieee_fold episodes 72+   = NEW style (from 24 Nov): deeper grip, larger drop-off zone for finished folds.
+
+Do NOT mix the two styles in one training run: the model would average them (grab half-deep, drop in between).
+Train / fine-tune on episodes 72+ only, e.g. starting from the old fold model
+(D:\lerobot\saved\ieee_fold_clean_1123 or outputs\train\ieee_fold_clean_cloud_1123_1522, checkpoint 050000).
+Nothing is deleted: episodes 0-71 stay in the dataset as a backup.
+
+CLEAN_NEW.bat (24 Nov) makes ieee_fold_new_clean from episodes 72+ only (72 itself is on the DROP list:
+34 s wait while a cloth was put down, ran into the 90 s limit). Train / fine-tune fold on ieee_fold_new_clean.

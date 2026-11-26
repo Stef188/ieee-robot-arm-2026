@@ -1,0 +1,47 @@
+GAME 2 ROUND 1 - POURING (up to 100 points, best of 3 runs)
+===========================================================
+
+RULES (rulebook v0.8, section 5.8.1, updated 24 Nov)
+  - 3 runs of 2 minutes each; the best run counts.
+  - Cup: 60 mm wide, 150 mm tall, ~39 g, filled with 125 g rice. Bowl: 140 mm wide, 80 mm tall, ~33 g.
+    Both start upright in marked zones (cup full, bowl empty).
+  - One arm pours. The OTHER arm must hold, lift or steady the bowl during the pour (untouched bowl = no full credit).
+  - 60 pts if 120 g+ ends in the bowl (45: 100-119 g, 30: 80-99 g, 15: 50-79 g).
+  - 20 pts if 10 g or less is spilled (15: 11-25 g, 10: 26-40 g, 5: 41-60 g). Spill = loaded - bowl - what's left in the cup.
+  - 10 pts for clear two-arm use. Time: 10 pts if done in 45 s or less (8: 60 s, 6: 75 s, 4: 90 s, 2: 120 s).
+  - Penalties: bowl overturned -10, cup dropped and not recovered -10, -5 per object not inside the marked source area.
+    Cup and bowl must end upright or in a stable resting position.
+  - Say 'done' the moment the rice is in the bowl (judges confirm). Saying it before the pour is done = full 120 s, no time bonus.
+
+RECORDING (RECORD.bat, 50 demos per run; target 80)
+  - Up to 2 minutes per demo: press Right arrow as soon as the pour is finished. Aim for 80.
+  - Right arm grasps the cup LOW on its body. Left arm grips the bowl rim and lifts or pulls it a little toward the cup.
+  - Pour slowly over the bowl centre, tap once, set the cup upright, release the bowl, both arms home.
+  - The bowl must be visibly held in EVERY demo, or the model learns to ignore it.
+  - Move cup and bowl +-3 cm inside their start zones between demos. Always the full 125 g of rice.
+  - Finish every demo well under 45 seconds.
+  - Start AND end every demo in the same rest pose, grippers open.
+  - Move smoothly at one steady speed, same strategy every time. One person does all demos of a task if possible.
+  - Left arrow = THROW AWAY this demo and redo it (use it on every sloppy one).
+  - Right arrow = end the demo early / skip the reset wait.   Esc = stop and save. NEVER close the window.
+
+TRAINING (TRAIN.bat)
+  - Trains on ALL demos recorded so far for this task, about 4-5 hours on this laptop.
+  - Start it before bed, laptop on the charger. Do not run the robot while it trains (both use the graphics card).
+  - After a crash: ..\..\resume_train.bat pour
+
+RUNNING THE ROBOT (RUN.bat)
+  - The robot moves ON ITS OWN for the round's time. EMERGENCY STOP = Ctrl+C in the window, or the power switch.
+  - It uses the frozen model if there is one (..\..\freeze.bat pour), otherwise the newest.
+  - Test an older checkpoint:  RUN.bat 120 040000   (seconds, checkpoint step).
+  - Plans are NOT averaged, so quick moves like opening the gripper go through (lesson from the other laptop).
+  - RUN_FAST.bat plays the moves 1.5x faster (control loop 45 Hz instead of 30). Good for time bonuses;
+    if it overshoots, drops things or spills, try  RUN_FAST.bat 40  (1.33x) or go back to RUN.bat.
+  - RUN_SMOOTH.bat averages plans instead: smoother, but slow to react. Compare both and keep the better one.
+  - In a scored run: hands off the keyboard after starting, Wi-Fi off, tell the judge 'done' as soon as it finishes.
+
+IF IT GOES WRONG
+  - Jerky at the start of each new plan -> try RUN_SMOOTH (averages plans; fine here because the pour has no quick grab).
+  - Spills -> slower, lower pours in the demos, cup rim inside the bowl.
+
+Check progress any time: ..\..\status.bat
