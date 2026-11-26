@@ -392,8 +392,8 @@ component; everything else is trained from scratch on our own demonstrations.
 - `ieee_fold_new_clean`: 43 episodes, 55,724 frames. Only demonstrations with the final, deeper cloth grip are
   used, because the earlier demos with a different grip are inconsistent. Idle frames at the start and end are
   trimmed (`Game_02_Round_02/training-notes/CLEAN_NEW.bat`).
-- Augmentation: LeRobot's default image augmentation is off. Variety comes from varied object and cloth
-  positions across the demos.
+- Augmentation: LeRobot's image augmentation is on (random brightness, contrast, saturation, hue and
+  sharpness), plus varied object and cloth positions across the demos.
 
 **d. Training.** AdamW, learning rate 1e-5, batch 8, chunk 100.
 - Pouring: 200,000 steps.
