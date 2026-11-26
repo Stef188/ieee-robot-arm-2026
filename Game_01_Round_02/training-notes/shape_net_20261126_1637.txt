@@ -1,0 +1,22 @@
+isolated blocks (nothing else within 20 px): 422 of 451
+ShapeNet training 2026-11-26 16:35 | crops 468, block visible in 422 (the rest dropped: arm in the way)
+   cube               132  by colour {'red': 52, 'yellow': 35, 'green': 23, 'blue': 22}
+   cylinder           102  by colour {'red': 15, 'yellow': 40, 'green': 23, 'blue': 24}
+   dodecahedron        91  by colour {'red': 23, 'yellow': 15, 'green': 35, 'blue': 18}
+   pentagonal_prism    97  by colour {'red': 27, 'yellow': 25, 'green': 31, 'blue': 14}
+   fold 1/5: 75 test crops, accuracy 0.507 (hand-written baseline 0.613)
+   fold 2/5: 89 test crops, accuracy 0.461 (hand-written baseline 0.472)
+   fold 3/5: 83 test crops, accuracy 0.482 (hand-written baseline 0.602)
+   fold 4/5: 93 test crops, accuracy 0.430 (hand-written baseline 0.559)
+   fold 5/5: 82 test crops, accuracy 0.561 (hand-written baseline 0.573)
+
+CROSS-VALIDATED (unseen demo episodes): ShapeNet 0.486 | hand-written baseline 0.562 | chance 0.313
+per shape (ShapeNet): cube 0.57 (n=132), cylinder 0.41 (n=102), dodecahedron 0.42 (n=91), pentagonal_prism 0.52 (n=97)
+per colour (must be similar - no colour shortcut): red 0.54 (n=117), yellow 0.40 (n=115), green 0.49 (n=112), blue 0.53 (n=78)
+confusion (rows = true, cols = predicted, order cube / cylinder / dodecahedron / pentagonal_prism):
+     75   40    6   11
+     34   42    8   18
+     11   17   38   25
+     20   14   13   50
+
+saved D:\Robot stuff for rares\classical\shape_net.pt (40084 parameters)

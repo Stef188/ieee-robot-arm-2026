@@ -1,0 +1,14 @@
+GraspNet training 20261126_0022
+{"hidden": 16, "steps": 3000, "lr": 0.02, "weight_decay": 0.002, "ensemble": 5, "optimizer": "Adam (full batch)", "loss": "MSE on per-joint standardised targets", "inputs": "(u-350)/100, (v-330)/100 top-camera px", "outputs": ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll"]}
+
+left arm: 104 grab samples from 104 demonstration episodes, roll sign +1, trained in 2.8 s -> grasp_net_left_grasp.npz / _hover.npz (model in use: neural network (GraspNet))
+  training-set error (deg)  mean 7.12 | per joint shoulder_pan 1.62, shoulder_lift 3.73, elbow_flex 6.48, wrist_flex 5.65, wrist_roll 18.13
+  leave-one-out error (deg) NETWORK mean 7.97 median 7.38 | baseline cubic fit mean 7.83 median 6.97  (143 s)
+  per joint NETWORK  shoulder_pan 1.74, shoulder_lift 4.20, elbow_flex 7.44, wrist_flex 6.44, wrist_roll 20.03
+  per joint baseline shoulder_pan 1.27, shoulder_lift 4.12, elbow_flex 7.25, wrist_flex 6.41, wrist_roll 20.07
+
+right arm: 65 grab samples from 65 demonstration episodes, roll sign -1, trained in 2.5 s -> grasp_net_right_grasp.npz / _hover.npz (model in use: neural network (GraspNet))
+  training-set error (deg)  mean 7.00 | per joint shoulder_pan 2.12, shoulder_lift 4.48, elbow_flex 5.67, wrist_flex 4.57, wrist_roll 18.13
+  leave-one-out error (deg) NETWORK mean 9.64 median 8.56 | baseline cubic fit mean 10.47 median 8.51  (80 s)
+  per joint NETWORK  shoulder_pan 2.69, shoulder_lift 5.87, elbow_flex 7.79, wrist_flex 6.87, wrist_roll 24.98
+  per joint baseline shoulder_pan 2.08, shoulder_lift 6.69, elbow_flex 8.61, wrist_flex 7.60, wrist_roll 27.35

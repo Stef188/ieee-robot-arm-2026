@@ -1,0 +1,64 @@
+{
+  "date": "20261126_0022",
+  "hyperparameters": {
+    "hidden": 16,
+    "steps": 3000,
+    "lr": 0.02,
+    "weight_decay": 0.002,
+    "ensemble": 5,
+    "optimizer": "Adam (full batch)",
+    "loss": "MSE on per-joint standardised targets",
+    "inputs": "(u-350)/100, (v-330)/100 top-camera px",
+    "outputs": [
+      "shoulder_pan",
+      "shoulder_lift",
+      "elbow_flex",
+      "wrist_flex",
+      "wrist_roll"
+    ]
+  },
+  "arms": {
+    "left": {
+      "samples": 104,
+      "episodes": 104,
+      "train_mean_err_deg": 7.120902833940387,
+      "loo_mean_deg_network": 7.967525111684175,
+      "loo_mean_deg_baseline": 7.825866678400675,
+      "loo_per_joint_network": [
+        1.738,
+        4.196,
+        7.435,
+        6.441,
+        20.027
+      ],
+      "loo_per_joint_baseline": [
+        1.272,
+        4.124,
+        7.251,
+        6.409,
+        20.074
+      ]
+    },
+    "right": {
+      "samples": 65,
+      "episodes": 65,
+      "train_mean_err_deg": 6.995188114046582,
+      "loo_mean_deg_network": 9.640839320285842,
+      "loo_mean_deg_baseline": 10.46671660638828,
+      "loo_per_joint_network": [
+        2.689,
+        5.869,
+        7.793,
+        6.871,
+        24.983
+      ],
+      "loo_per_joint_baseline": [
+        2.082,
+        6.693,
+        8.607,
+        7.6,
+        27.352
+      ]
+    }
+  }
+}

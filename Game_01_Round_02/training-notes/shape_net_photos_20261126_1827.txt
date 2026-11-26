@@ -1,0 +1,32 @@
+isolated blocks (nothing else within 20 px): 422 of 451
+ShapeNet training 2026-11-26 18:17 | crops 468, block visible in 422 (the rest dropped: arm in the way)
+demo crops NOT used (SHAPE_DEMOS=0)
++ photo session: 1710 crops with clean labels
+   cube               417  by colour {'red': 111, 'yellow': 92, 'green': 105, 'blue': 109}
+   cylinder           357  by colour {'red': 87, 'yellow': 90, 'green': 90, 'blue': 90}
+   dodecahedron       327  by colour {'red': 81, 'yellow': 75, 'green': 87, 'blue': 84}
+   pentagonal_prism   609  by colour {'red': 135, 'yellow': 162, 'green': 159, 'blue': 153}
+   fold 1/5: 348 test crops, accuracy 0.741 (hand-written baseline 0.687)
+   fold 2/5: 331 test crops, accuracy 0.737 (hand-written baseline 0.616)
+   fold 3/5: 351 test crops, accuracy 0.832 (hand-written baseline 0.735)
+   fold 4/5: 332 test crops, accuracy 0.792 (hand-written baseline 0.708)
+   fold 5/5: 348 test crops, accuracy 0.744 (hand-written baseline 0.718)
+
+CROSS-VALIDATED (unseen demo episodes): ShapeNet 0.770 | hand-written baseline 0.694 | chance 0.356
+ON THE PHOTO-SESSION CROPS (clean labels, unseen photos): ShapeNet 0.770 | hand-written 0.694
+per shape (ShapeNet): cube 0.90 (n=417), cylinder 0.84 (n=357), dodecahedron 0.81 (n=327), pentagonal_prism 0.62 (n=609)
+per colour (must be similar - no colour shortcut): red 0.76 (n=414), yellow 0.67 (n=419), green 0.81 (n=441), blue 0.83 (n=436)
+CONFIDENT-ONLY (place a block only when the model is at least this sure; wrong bin = minus points):
+   >= 40% sure: 0.779 correct on 1681 blocks (98% of all); expected points per placed block ~ +0.56 x its value
+   >= 50% sure: 0.800 correct on 1560 blocks (91% of all); expected points per placed block ~ +0.60 x its value
+   >= 60% sure: 0.833 correct on 1306 blocks (76% of all); expected points per placed block ~ +0.67 x its value
+   >= 70% sure: 0.876 correct on 1064 blocks (62% of all); expected points per placed block ~ +0.75 x its value
+   >= 80% sure: 0.924 correct on 806 blocks (47% of all); expected points per placed block ~ +0.85 x its value
+   >= 90% sure: 0.954 correct on 498 blocks (29% of all); expected points per placed block ~ +0.91 x its value
+confusion (rows = true, cols = predicted, order cube / cylinder / dodecahedron / pentagonal_prism):
+    374    6    0   37
+     23  301    2   31
+     16    4  264   43
+    192   20   20  377
+
+saved D:\Robot stuff for rares\classical\shape_net_photos.pt (40084 parameters)

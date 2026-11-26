@@ -1,0 +1,45 @@
+GraspNet variants benchmark 20261126_0257 - leave-one-out on the demo grabs (deg, lower = better)
+   left: fold 1/104 (7 s)
+   left: fold 11/104 (72 s)
+   left: fold 21/104 (133 s)
+   left: fold 31/104 (193 s)
+   left: fold 41/104 (254 s)
+   left: fold 51/104 (314 s)
+   left: fold 61/104 (374 s)
+   left: fold 71/104 (435 s)
+   left: fold 81/104 (495 s)
+   left: fold 91/104 (556 s)
+   left: fold 101/104 (617 s)
+
+LEFT arm - 104 demo grabs
+   variant            LOO pos.joints  LOO all 5      size  time/grab  vs #1 (max)  note
+   1_ensemble_fp64              4.95       7.97    16600B     0.063ms        0.00  current: 5 nets, full precision
+   2_single_net                 4.97       7.98     3320B     0.040ms        1.25  1 net instead of 5
+   3_distilled_tiny             5.10       8.06      604B     0.031ms        3.10  2-8-8 net trained to copy #1
+   4_fp16                       4.95       7.97     4150B     0.064ms        0.03  half precision
+   5_int8                       4.97       7.99     1362B     0.063ms        0.56  8-bit integer weights
+   6_int4                       6.11       9.01      474B     0.068ms        8.75  4-bit integer weights
+   7_pruned50                   4.96       7.97     4520B     0.061ms        0.49  50% weights removed
+   8_pruned90                   8.21      10.76     1500B     0.067ms       25.74  90% weights removed
+   9_lookup_table               4.95       7.97   265860B     1.382ms        0.00  pre-computed 2-px grid, int16
+   10_extra_inputs              5.25       7.58    36920B     0.069ms       10.93  + rotation + colour as inputs, 24 wide
+   right: fold 1/65 (5 s)
+   right: fold 11/65 (61 s)
+   right: fold 21/65 (113 s)
+   right: fold 31/65 (154 s)
+   right: fold 41/65 (190 s)
+   right: fold 51/65 (226 s)
+   right: fold 61/65 (262 s)
+
+RIGHT arm - 65 demo grabs
+   variant            LOO pos.joints  LOO all 5      size  time/grab  vs #1 (max)  note
+   1_ensemble_fp64              5.81       9.64    16600B     0.043ms        0.00  current: 5 nets, full precision
+   2_single_net                 5.67       9.49     3320B     0.017ms        4.50  1 net instead of 5
+   3_distilled_tiny             6.01       9.74      604B     0.017ms        4.56  2-8-8 net trained to copy #1
+   4_fp16                       5.81       9.64     4150B     0.043ms        0.02  half precision
+   5_int8                       5.82       9.65     1804B     0.044ms        0.42  8-bit integer weights
+   6_int4                       7.02      11.13      648B     0.043ms        7.63  4-bit integer weights
+   7_pruned50                   5.91       9.64     4520B     0.043ms        3.09  50% weights removed
+   8_pruned90                   9.46      14.37     1500B     0.043ms       26.82  90% weights removed
+   9_lookup_table               5.81       9.64   265860B     0.876ms        0.00  pre-computed 2-px grid, int16
+   10_extra_inputs              6.70      10.08    36920B     0.045ms       21.93  + rotation + colour as inputs, 24 wide

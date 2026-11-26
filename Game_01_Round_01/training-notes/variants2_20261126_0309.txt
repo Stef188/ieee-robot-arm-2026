@@ -1,0 +1,49 @@
+Grasp-pose model TYPES benchmark (variants 11-20) 20261126_0309 - leave-one-out on the demo grabs (deg, lower = better)
+   left: fold 1/104 (16 s)
+   left: fold 11/104 (165 s)
+   left: fold 21/104 (312 s)
+   left: fold 31/104 (459 s)
+   left: fold 41/104 (607 s)
+   left: fold 51/104 (754 s)
+   left: fold 61/104 (900 s)
+   left: fold 71/104 (1047 s)
+   left: fold 81/104 (1193 s)
+   left: fold 91/104 (1340 s)
+   left: fold 101/104 (1486 s)
+
+LEFT arm - 104 demo grabs
+   variant              LOO pos.joints  LOO all 5   params  time/grab  vs #1 (max)
+   1_current_ensemble             4.95       7.97     2075     0.045ms        0.00
+   11_wide64                      4.95       8.00    14061     0.034ms        2.68
+   12_deep3                       4.89       8.09     2061     0.037ms        9.98
+   13_relu                        4.85       7.96     2075     0.047ms        5.53
+   14_ensemble10                  4.96       7.97     4150     0.077ms        0.20
+   15_dropout                     5.49       8.42     6635     0.045ms        8.70
+   16_knn5                        5.29       8.66      728     0.021ms       27.06
+   17_gauss_process               4.95       7.97      730     0.013ms        5.96
+   18_random_forest               6.50       9.48    19516     0.100ms       30.16
+   19_boosted_trees               5.67       9.22     8848     0.190ms       23.00
+   20_robust_huber                5.03       7.91     2075     0.044ms        2.74
+   Gaussian process 'how sure' score vs real error: correlation +0.05; error where it is UNSURE 5.05 deg vs SURE 4.85 deg
+   right: fold 1/65 (12 s)
+   right: fold 11/65 (132 s)
+   right: fold 21/65 (251 s)
+   right: fold 31/65 (371 s)
+   right: fold 41/65 (491 s)
+   right: fold 51/65 (611 s)
+   right: fold 61/65 (731 s)
+
+RIGHT arm - 65 demo grabs
+   variant              LOO pos.joints  LOO all 5   params  time/grab  vs #1 (max)
+   1_current_ensemble             5.81       9.64     2075     0.044ms        0.00
+   11_wide64                      5.69       9.51    14061     0.033ms        3.91
+   12_deep3                       5.63       9.89     2061     0.036ms        8.14
+   13_relu                        5.89       9.84     2075     0.047ms        6.42
+   14_ensemble10                  5.81       9.65     4150     0.077ms        1.05
+   15_dropout                     6.49      10.17     6635     0.045ms       10.23
+   16_knn5                        6.08      10.02      455     0.020ms       26.95
+   17_gauss_process               5.75       9.59      457     0.012ms       14.65
+   18_random_forest               7.67      11.09    13048     0.096ms       27.16
+   19_boosted_trees               7.11      10.70     8918     0.190ms       14.91
+   20_robust_huber                5.96       9.42     2075     0.044ms       11.64
+   Gaussian process 'how sure' score vs real error: correlation +0.25; error where it is UNSURE 6.25 deg vs SURE 5.26 deg

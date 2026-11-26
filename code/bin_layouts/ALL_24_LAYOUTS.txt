@@ -1,0 +1,28 @@
+Bin spots (left -> right in the top camera): red spot (224,265) = left arm, green spot (305,250) = left arm, blue spot (408,256) = right arm, yellow spot (502,280) = right arm
+
+OK   order red / green / blue / yellow    -> red: left arm on the red spot, green: left arm on the green spot, blue: right arm on the blue spot, yellow: right arm on the yellow spot
+OK   order red / green / yellow / blue    -> red: left arm on the red spot, green: left arm on the green spot, yellow: right arm on the blue spot, blue: right arm on the yellow spot
+OK   order red / blue / green / yellow    -> red: left arm on the red spot, blue: left arm on the green spot, green: right arm on the blue spot, yellow: right arm on the yellow spot
+OK   order red / blue / yellow / green    -> red: left arm on the red spot, blue: left arm on the green spot, yellow: right arm on the blue spot, green: right arm on the yellow spot
+OK   order red / yellow / green / blue    -> red: left arm on the red spot, yellow: left arm on the green spot, green: right arm on the blue spot, blue: right arm on the yellow spot
+OK   order red / yellow / blue / green    -> red: left arm on the red spot, yellow: left arm on the green spot, blue: right arm on the blue spot, green: right arm on the yellow spot
+OK   order green / red / blue / yellow    -> green: left arm on the red spot, red: left arm on the green spot, blue: right arm on the blue spot, yellow: right arm on the yellow spot
+OK   order green / red / yellow / blue    -> green: left arm on the red spot, red: left arm on the green spot, yellow: right arm on the blue spot, blue: right arm on the yellow spot
+OK   order green / blue / red / yellow    -> green: left arm on the red spot, blue: left arm on the green spot, red: right arm on the blue spot, yellow: right arm on the yellow spot
+OK   order green / blue / yellow / red    -> green: left arm on the red spot, blue: left arm on the green spot, yellow: right arm on the blue spot, red: right arm on the yellow spot
+OK   order green / yellow / red / blue    -> green: left arm on the red spot, yellow: left arm on the green spot, red: right arm on the blue spot, blue: right arm on the yellow spot
+OK   order green / yellow / blue / red    -> green: left arm on the red spot, yellow: left arm on the green spot, blue: right arm on the blue spot, red: right arm on the yellow spot
+OK   order blue / red / green / yellow    -> blue: left arm on the red spot, red: left arm on the green spot, green: right arm on the blue spot, yellow: right arm on the yellow spot
+OK   order blue / red / yellow / green    -> blue: left arm on the red spot, red: left arm on the green spot, yellow: right arm on the blue spot, green: right arm on the yellow spot
+OK   order blue / green / red / yellow    -> blue: left arm on the red spot, green: left arm on the green spot, red: right arm on the blue spot, yellow: right arm on the yellow spot
+OK   order blue / green / yellow / red    -> blue: left arm on the red spot, green: left arm on the green spot, yellow: right arm on the blue spot, red: right arm on the yellow spot
+OK   order blue / yellow / red / green    -> blue: left arm on the red spot, yellow: left arm on the green spot, red: right arm on the blue spot, green: right arm on the yellow spot
+OK   order blue / yellow / green / red    -> blue: left arm on the red spot, yellow: left arm on the green spot, green: right arm on the blue spot, red: right arm on the yellow spot
+OK   order yellow / red / green / blue    -> yellow: left arm on the red spot, red: left arm on the green spot, green: right arm on the blue spot, blue: right arm on the yellow spot
+OK   order yellow / red / blue / green    -> yellow: left arm on the red spot, red: left arm on the green spot, blue: right arm on the blue spot, green: right arm on the yellow spot
+OK   order yellow / green / red / blue    -> yellow: left arm on the red spot, green: left arm on the green spot, red: right arm on the blue spot, blue: right arm on the yellow spot
+OK   order yellow / green / blue / red    -> yellow: left arm on the red spot, green: left arm on the green spot, blue: right arm on the blue spot, red: right arm on the yellow spot
+OK   order yellow / blue / red / green    -> yellow: left arm on the red spot, blue: left arm on the green spot, red: right arm on the blue spot, green: right arm on the yellow spot
+OK   order yellow / blue / green / red    -> yellow: left arm on the red spot, blue: left arm on the green spot, green: right arm on the blue spot, red: right arm on the yellow spot
+
+ALL 24 ORDERS WORK
