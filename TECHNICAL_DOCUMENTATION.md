@@ -370,3 +370,48 @@ No external datasets were used. All demonstrations were recorded by the team.
 - GraspNet and its evaluation against a baseline.
 - Sub-pixel true-centre detection.
 - The complete autonomous bimanual sorting pipeline.
+
+---
+
+# Game 2: Two-Arm Coordination (Pouring, Folding): end-to-end imitation learning
+
+**a. Architecture.** The same two SO-ARM100 follower arms, laptop and cameras as Game 1. Three cameras: top,
+left wrist (Intel RealSense) and right wrist (Logitech C270). During recording, two leader arms are used for
+teleoperated demonstrations only. In a scored run, nobody touches anything: the policy reads the 3 camera images
+and the 12 joint positions at 30 Hz and outputs the next joint targets for both arms. Everything runs on the
+laptop wired to the arms, with no network (5.4.2.2, 5.4.5).
+
+**b. Model.** ACT (Action Chunking with Transformers) from the open-source LeRobot library (Hugging Face).
+It is a transformer encoder-decoder with a CVAE that predicts a chunk of 100 future joint targets for both arms
+from the images and joint state. The vision backbone is ResNet-18 with ImageNet weights, the only pre-trained
+component; everything else is trained from scratch on our own demonstrations.
+
+**c. Datasets.** Both were recorded by the team by teleoperation with leader/follower arms, in LeRobot format
+(parquet + video), at 30 fps with 3 cameras plus joints.
+- `ieee_pour`: 75 episodes, 101,391 frames.
+- `ieee_fold_new_clean`: 43 episodes, 55,724 frames. Only demonstrations with the final, deeper cloth grip are
+  used, because the earlier demos with a different grip are inconsistent. Idle frames at the start and end are
+  trimmed (`Game_02_Round_02/training-notes/CLEAN_NEW.bat`).
+- Augmentation: LeRobot's default image augmentation is off. Variety comes from varied object and cloth
+  positions across the demos.
+
+**d. Training.** AdamW, learning rate 1e-5, batch 8, chunk 100.
+- Pouring: 200,000 steps.
+- Folding: 200,000 steps (150k on a cloud L40S GPU + 50k on the laptop). Final L1 loss 0.060; offline mean
+  joint error on held-out frames 1.39 deg (1.65 deg at 150k).
+- Evaluation: offline joint error plus timed runs on the real arms scored with the official rules.
+- Training scripts: `Game_02_Round_0x/training-notes/TRAIN*.bat`.
+
+**e. Code and weights.** LeRobot (open source) plus our `RECORD`/`TRAIN`/`RUN` scripts in each round's
+`training-notes/`. The weights (207 MB per model) are above GitHub's file limit, so they are shared with the
+judges by secure link on request.
+
+**f. Autonomy.** Perception and decision-making are learned end to end. The policy sees the cup/cloth and both
+grippers in the camera images and outputs both arms' motions; there is no hand-written trajectory.
+
+**g. Third party.** LeRobot (Apache-2.0), PyTorch, torchvision ResNet-18 ImageNet weights, OpenCV, pyrealsense2.
+
+**h. Limitations.**
+- Folding: the policy cannot recover a dropped cloth, because no demonstration shows a recovery.
+- Grasps are tightly clustered around the demonstrated positions.
+- Results depend on lighting similar to the recordings.

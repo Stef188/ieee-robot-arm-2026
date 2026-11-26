@@ -1,6 +1,6 @@
 TEAM: <TEAM NAME>                         (rename this folder TEAM_NAME to the team name)
 IEEE Global Robot Championship 2026 - Robot Arm AI Challenge - Game 1: Pick-and-Place
-Submission under Rules & Regulations v1.0 FINAL, 5.4.1.8 - 5.4.1.11.   Repository: <PRIVATE GITHUB URL>
+Submission under Rules & Regulations v1.0 FINAL, 5.4.1.8 - 5.4.1.11.   Repository: https://github.com/Stef188/ieee-robot-arm-2026 (private)
 
 START HERE: TECHNICAL_DOCUMENTATION.md - covers items a-h of 5.4.1.10 (architecture, AI models, datasets, training,
 code/weights/instructions, autonomous perception + decision-making + manipulation, third-party declaration,
@@ -32,6 +32,12 @@ FOLDERS
      videos/          see videos/README.txt
 
 EXTERNAL / LARGE FILES (raw LeRobot datasets, too large for GitHub)
-  ieee_colour_v2      (202 episodes, colour-sorting demonstrations):   <SECURE LINK>
-  ieee_shape_clean    (229 episodes, shape-sorting demonstrations):    <SECURE LINK>
-  ieee_shape_v2       (33 episodes):                                   <SECURE LINK>
+  ieee_colour_v2      (202 episodes, colour-sorting demonstrations):   kept on the team laptop (too large for GitHub) - secure link to the judges on request
+  ieee_shape_clean    (229 episodes, shape-sorting demonstrations):    kept on the team laptop (too large for GitHub) - secure link to the judges on request
+  ieee_shape_v2       (33 episodes):                                   kept on the team laptop (too large for GitHub) - secure link to the judges on request
+
+GAME 2 (Two-Arm Coordination) - imitation learning, LeRobot ACT
+  Game_02_Round_01 = Pouring  : ACT 200k steps on ieee_pour (75 demos, 101k frames, 3 cameras)
+  Game_02_Round_02 = Folding  : ACT 200k steps on ieee_fold_new_clean (43 demos, 56k frames, 3 cameras)
+  Model weights (207 MB each) and datasets are larger than GitHub's limit: kept on the team laptop,
+  secure link to the judges on request. Details: each round's README.txt and TECHNICAL_DOCUMENTATION.md (Game 2).
