@@ -1110,6 +1110,58 @@ def misses_at(deferred, u, v):
     return max([n for d, n in deferred.items() if math.hypot(u - d[0], v - d[1]) < 15], default=0)
 
 
+
+JAW_REACH = float(os.environ.get("SORT_JAW_REACH") or 26)   # px (~3 cm): how far each OPEN jaw tip reaches from the centre
+JAW_CLEAR = float(os.environ.get("SORT_JAW_CLEAR") or 6)    # px: the jaw tips must stay this far from bins / other blocks
+OWN_MARGIN = float(os.environ.get("SORT_OWN_MARGIN") or 15)  # px: a block clearly nearer the OTHER arm's base is its job
+
+
+def _bin_polys(det):
+    import cv2
+    out = []
+    for b in det["bins"].values():
+        cx, cy, w, h = b[:4]
+        w, h = min(w, BIN_MAX_SIDE), min(h, BIN_MAX_SIDE)
+        ang = b[4] if len(b) > 4 else 0.0
+        out.append(cv2.boxPoints(((float(cx), float(cy)), (float(w), float(h)), float(ang))).astype(np.float32))
+    return out
+
+
+def jaw_choice(o, det):
+    """27 Nov (competition): the jaw closing direction that keeps the OPEN jaw tips furthest from bins and neighbouring
+    blocks, among the directions this block's shape allows (vision.grasp_geometry): round top = any direction,
+    square = its two face directions, long = across it only. Returns (direction deg, clearance px, object with it)."""
+    import cv2
+    u, v = float(o[1]), float(o[2])
+    w, h, ang = float(o[5] or 0), float(o[6] or 0), float(o[3] or 0)
+    if shape_of(o) == "long":
+        cands = [(ang if w >= h else ang + 90) + 90]
+    elif abs(w - h) < 1e-6 and ang == 0.0:
+        cands = list(range(0, 180, 15))                       # round-ish: free
+    else:
+        cands = [ang, ang + 90]
+    polys = _bin_polys(det)
+    others = [q for q in det["objects"] if math.hypot(q[1] - u, q[2] - v) > 4]
+    best = None
+    for th in cands:
+        d = np.array([math.cos(math.radians(th)), math.sin(math.radians(th))])
+        c_bin, c_blk = 1e9, 1e9
+        for sgn in (1, -1):
+            tx, ty = u + sgn * JAW_REACH * d[0], v + sgn * JAW_REACH * d[1]
+            for pl in polys:
+                c_bin = min(c_bin, -cv2.pointPolygonTest(pl, (float(tx), float(ty)), True))
+            for q in others:
+                c_blk = min(c_blk, math.hypot(tx - q[1], ty - q[2]) - max(q[5] or 0, q[6] or 0) / 2)
+        # bins are a HARD limit (returned); neighbouring blocks only help choose the direction (a brushed block is
+        # pushed a little, a hit bin is a disaster)
+        score = min(c_bin, c_blk + 15)
+        if best is None or score > best[2]:
+            best = (th, c_bin, score)
+    th, clr, _ = best
+    if shape_of(o) == "long":
+        return th, clr, o                                     # long blocks keep their own convention
+    return th, clr, (o[0], o[1], o[2], float(th % 180)) + tuple(o[4:])
+
 def choose_task(side, det, maps, deferred, other_claim, busy, spots, put_down=(), margin=None, clear=35, why=None,
                 relax_shape=False, desperate=False):
     """Best job for THIS arm. busy = table strips this arm must stay out of (the other arm's current pick, or the one
@@ -1141,8 +1193,14 @@ def choose_task(side, det, maps, deferred, other_claim, busy, spots, put_down=()
         if colour not in det["bins"]:
             no("no bin of its colour")
             continue
-        if near_bin(u, v, det, margin=BIN_CLEAR):          # 26 Nov 22:25: also in the last-resort pass (it grabbed a bin)
+        if near_bin(u, v, det, margin=3):                  # the block itself is (almost) inside a bin outline
             no("too close to a bin")
+            continue
+        # 27 Nov (competition): turn the jaws so the open tips stay clear of the bins and the neighbouring blocks -
+        # a block near a bin is taken whenever SOME allowed jaw direction keeps both tips clear (no fixed 2.4 cm ban)
+        _th, _clr, o = jaw_choice(o, det)
+        if _clr < JAW_CLEAR:
+            no("jaws would hit a bin")
             continue
         half = max(o[5] or 0, o[6] or 0) / 2.0 if len(o) > 6 else 0.0
         if inside_line(u, v) < max(LINE_IN, half + LINE_EDGE):
@@ -1176,9 +1234,14 @@ def choose_task(side, det, maps, deferred, other_claim, busy, spots, put_down=()
         near = math.hypot(u - ARM_BASE_PX[side][0], v - ARM_BASE_PX[side][1]) < NEAR_BASE   # right by this arm's base
         by_bin = near_bin(u, v, det, margin=BIN_LAST)        # close-ish to a bin: taken, but after everything else
         if has_me:
-            if has_other and other_reach and mo.reach(u, v) > m.reach(u, v):
+            # 27 Nov (competition): the arm whose BASE is nearer takes it (the left arm kept reaching into the right
+            # arm's side). When this arm has been idle (last-resort pass) and the other arm is busy elsewhere, it takes
+            # the block anyway - conflict prevention (busy strips) still applies below.
+            d_me = math.hypot(u - ARM_BASE_PX[side][0], v - ARM_BASE_PX[side][1])
+            d_ot = math.hypot(u - ARM_BASE_PX[other][0], v - ARM_BASE_PX[other][1])
+            if has_other and other_reach and d_ot < d_me - OWN_MARGIN and not (desperate and other_claim is not None):
                 no("the other arm's job")
-                continue                                   # both have this bin: the closer arm does it
+                continue                                   # both have this bin: the nearer arm does it
             tasks.append(dict(kind="sort", o=o, bin_xy=(bu, bv), score=m.reach(u, v), misses=n, near=near, by_bin=by_bin,
                               iv=strip(side, (u, v), (bu, bv))))
         elif not has_other or other_reach:

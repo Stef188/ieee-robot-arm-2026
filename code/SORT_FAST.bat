@@ -21,7 +21,7 @@ set SORT_ALIGN=0
 set SORT_BIN_CLEAR=20
 REM 26 Nov 20:00: right-arm trim OFF - its taught grabs are at block centres, the trim aimed 1.1 cm away from them
 REM 27 Nov 18:50 (competition): grabs landed ~1 cm to the RIGHT of the blocks -> aim 1 cm LEFT (camera picture)
-if not defined SORT_TRIM_LEFT set SORT_TRIM_LEFT=-1,0
+if not defined SORT_TRIM_LEFT set SORT_TRIM_LEFT=0,0
 if not defined SORT_TRIM_RIGHT set SORT_TRIM_RIGHT=-1,0
 REM 27 Nov (competition): left arm base clamped ~6 deg turned vs the lab (6 grabs taught here, fit_offset.py)
 if not defined SORT_PAN_LEFT set SORT_PAN_LEFT=8
