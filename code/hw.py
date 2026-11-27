@@ -100,11 +100,20 @@ class TopCamera:
         for _ in range(30):         # let exposure settle
             self.cam.read()
 
-    def grab(self):
+    IS_TOP = True                   # 27 Nov: only the TOP camera gets the alignment correction (camera_warp.py)
+
+    def grab(self, raw=False):
         import cv2
         for _ in range(3):          # flush old frames
             self.cam.read()
-        return cv2.cvtColor(np.asarray(self.cam.read()), cv2.COLOR_RGB2BGR)
+        img = cv2.cvtColor(np.asarray(self.cam.read()), cv2.COLOR_RGB2BGR)
+        if raw or not self.IS_TOP:
+            return img
+        try:                        # 27 Nov: straighten into the lab view if CAMERA_ALIGN.bat saved a correction
+            import camera_warp
+            return camera_warp.apply(img)
+        except ImportError:
+            return img
 
     def disconnect(self):
         try:
@@ -116,6 +125,8 @@ class TopCamera:
 class WristCamera(TopCamera):
     """The camera on one gripper, opened exactly like the competition runs (config.bat: LEFT/RIGHT_WRIST_TYPE,
     CAM_LEFT_WRIST / CAM_RIGHT_WRIST). Left = RealSense 424x240, right = Logitech webcam 640x360 (MJPG, DirectShow)."""
+
+    IS_TOP = False
 
     def __init__(self, side):
         S = side.upper()
