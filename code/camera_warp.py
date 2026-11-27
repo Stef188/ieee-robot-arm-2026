@@ -16,7 +16,7 @@ If the camera sits differently at the competition:
 Keys in the window:
   C  click the 4 inner corners of the black line (top-left, top-right, bottom-right, bottom-left as seen in the picture)
   W  write the software correction from the last 4 clicks      X  delete the software correction
-  V  view: raw camera <-> corrected (what the sorter will see)  G  ghost of the lab reference picture on/off
+  V  view: raw camera <-> corrected (what the sorter will see)  G  ghost of the lab reference blended into the LIVE picture on/off (off at start)
   S  save the current RAW view as the new reference (old one is kept with a time stamp)   Q / Esc  quit
 """
 import json
@@ -160,8 +160,9 @@ def main():
             save_reference(cam.grab(raw=True))
             return
         ref = cv2.imread(str(REF_IMG)) if REF_IMG.exists() else None
-        Z = 1.5
-        st = dict(clicks=[], clicking=False, ghost=ref is not None, corrected=False, msg=[], err=None, last=None)
+        Z = 1.0
+        # 27 Nov (at the competition): LIVE feed big on the left, lab reference on the right - ghost OFF by default
+        st = dict(clicks=[], clicking=False, ghost=False, corrected=False, msg=[], err=None, last=None)
         st["msg"] = ["C = click the 4 inner corners of the black line   G ghost   V raw/corrected   W save correction",
                      "X delete correction   S save view as reference   Q quit"] + \
                     ([] if ref is not None else ["(no reference picture yet - in the lab, table clear: press S)"])
@@ -177,7 +178,7 @@ def main():
         st["ref"] = ref
 
         def on_click(e):
-            if st["clicking"]:
+            if st["clicking"] and e.x < 640 * Z:          # clicks only count on the LIVE (left) picture
                 st["clicks"].append((e.x / Z, e.y / Z))
                 if len(st["clicks"]) == 4:
                     st["clicking"] = False
@@ -225,7 +226,18 @@ def main():
             draw_overlay(img, cv2)
             for (u, v) in st["clicks"]:
                 cv2.drawMarker(img, (int(u), int(v)), (0, 0, 255), cv2.MARKER_TILTED_CROSS, 12, 2)
-            big = cv2.resize(img, None, fx=Z, fy=Z)
+            live_panel = cv2.resize(img, None, fx=Z, fy=Z)
+            cv2.rectangle(live_panel, (0, 0), (live_panel.shape[1] - 1, live_panel.shape[0] - 1), (0, 255, 0), 3)
+            if st["ref"] is not None:
+                rp = st["ref"].copy()
+                draw_overlay(rp, cv2)
+                rp = cv2.resize(rp, (live_panel.shape[1], live_panel.shape[0]))
+            else:
+                rp = np.zeros_like(live_panel)
+            for pnl, t in ((live_panel, "LIVE - competition camera now"), (rp, "LAB REFERENCE - make LIVE look like this")):
+                cv2.putText(pnl, t, (8, pnl.shape[0] - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 4)
+                cv2.putText(pnl, t, (8, pnl.shape[0] - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            big = np.hstack([live_panel, rp])
             head = ([f"CLICK the {CORNER_NAMES[len(st['clicks'])]} inner corner of the black line"] if st["clicking"]
                     else st["msg"])
             head = head + [f"view: {'CORRECTED (what the sorter sees)' if st['corrected'] else 'RAW camera'}"
