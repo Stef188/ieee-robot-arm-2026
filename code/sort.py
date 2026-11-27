@@ -942,6 +942,7 @@ BLOCK_DEG = float(os.environ.get("SORT_BLOCK_DEG") or 8)  # arm stopped this far
 MISS_LAST = int(os.environ.get("SORT_MISS_LAST") or 4)
 OUTSIDE_PX = float(os.environ.get("SORT_OUTSIDE_PX") or 45)   # px (~5.5 cm) outside the black line still picked (0 = off)
 TAUGHT_DROP_UP = float(os.environ.get("SORT_TAUGHT_DROP_UP") or 0.6)   # lift heights above a taught drop pose to open
+LAST_MIN = float(os.environ.get("SORT_LAST_MIN") or 0.5)   # last resort: most likely shape at least this sure
 PROBES = int(os.environ.get("SORT_PROBES") or 4)          # 27 Nov: local self-correcting probes after a miss (0 = off)
 PROBE_CM = [(0, -1), (0, 1), (1, 0), (-1, 0)]             # (further, left) cm, as seen from the arm
 KNOWN_BIN_R = float(os.environ.get("SORT_KNOWN_BIN_R") or 28)   # px: radius around a taught bin spot that is "bin"   # a block missed this often goes behind every other block
@@ -1182,7 +1183,9 @@ def choose_task(side, det, maps, deferred, other_claim, busy, spots, put_down=()
             # 27 Nov: after IDLE_MAX the last-resort pass takes ANY block with positive expected points (no confidence floor)
             # 27 Nov 19:20 (user: "1 s rule, seriously"): after IDLE_MAX an idle arm takes ANY block by its most likely
             # shape - best expected points first (tasks are sorted by value) - nothing scores while the arm stands still
-            if relax_shape and len(o) > 9 and ((conf_ok and ev >= EV_RELAX) or desperate):
+            # 27 Nov 19:40 (user: a blue cube went to the green bin): the last resort takes a block only when its most
+            # likely shape is at least LAST_MIN sure
+            if relax_shape and len(o) > 9 and ((conf_ok and ev >= EV_RELAX) or (desperate and o[9] >= LAST_MIN)):
                 import shape_model as SM
                 o = (SM.SHAPE_TO_BIN[o[8]],) + tuple(o[1:])      # nothing sure left: take its best guess
                 colour = o[0]
@@ -1238,6 +1241,9 @@ def choose_task(side, det, maps, deferred, other_claim, busy, spots, put_down=()
             no("the other arm's job")
         elif any(math.hypot(u - s[0], v - s[1]) < 30 for s in put_down):
             no("put down for the other arm")
+        elif HANDOFF and spots and len(o) > 9 and (o[8] == "cube" or (desperate and o[9] < 0.6)):
+            # 27 Nov 19:40 (user): never hand a CUBE over (1-2 pts, two arm moves), nor an unsure last-resort block
+            no("not worth a hand-off")
         elif HANDOFF and spots:
             # the arm with the bin can't reach it -> this arm moves it to a free middle spot the other arm reaches
             spot = next((s for s in spots
