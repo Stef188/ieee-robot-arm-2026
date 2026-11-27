@@ -915,6 +915,11 @@ DESPERATE_MARGIN = float(os.environ.get("SORT_DESPERATE_MARGIN") or 40)
 BIN_TOUCH = float(os.environ.get("SORT_BIN_TOUCH") or 12)
 BLOCK_DEG = float(os.environ.get("SORT_BLOCK_DEG") or 8)  # arm stopped this far from the grab pose = it HIT something
 #   (a bin, a block, the other arm) - 26 Nov: right-arm grabs stopped 13-52 deg short next to bins
+AIM_LEARN = os.environ.get("SORT_AIM_LEARN", "1") == "1"   # 27 Nov: learn each arm's aim error from pushed blocks
+AIM_PUSH = float(os.environ.get("SORT_AIM_PUSH") or -0.5)    # 27 Nov data: a jaw coming down on a block's edge pushes it
+#   AWAY from the gripper centre (30 left-arm misses: this reading gives "lands ~2 cm RIGHT", as seen at the table)
+AIM_MIN_MOVE = float(os.environ.get("SORT_AIM_MIN_MOVE") or 3)   # px: smaller movement = no information
+AIM_MAX = float(os.environ.get("SORT_AIM_MAX") or 20)        # px (~2.5 cm): never correct more than this
 MISS_LAST = int(os.environ.get("SORT_MISS_LAST") or 4)   # a block missed this often goes behind every other block
 SHAPE_RANK = {"pentagonal_prism": 4, "dodecahedron": 3, "cylinder": 2, "cube": 1}   # shape round: picking order
 LINE_EDGE = float(os.environ.get("SORT_LINE_EDGE") or 4)   # px: the block's EDGE (not just its centre) must be this
@@ -1261,6 +1266,12 @@ def run_both():
     deferred = {}
     put_down = []                               # where hand-offs put blocks down (never handed off again from there)
     stats = {"done": 0, "handed": 0, "miss": 0, "wait_s": 0.0}
+    # 27 Nov (competition): each arm LEARNS its aim error during the run. When the jaws close off-centre they push the
+    # block towards the gripper's real centre, so a block that moved after a miss shows where the gripper really
+    # landed: landing point = block before + movement / AIM_PUSH. Every later grab of that arm is aimed that much the
+    # other way (towards the block's centre). A miss that did not move the block gives no information.
+    aim_err = {"left": np.zeros(2), "right": np.zeros(2)}
+    last_miss = {"left": None, "right": None}
     stop = threading.Event()
     last_rec = {}
     run_id = time.strftime("%Y%m%d_%H%M%S")
@@ -1355,6 +1366,24 @@ def run_both():
         if lb is not None and not near_bin(o[1] + lb[0], o[2] + lb[1], det):
             o = (o[0], o[1] + lb[0], o[2] + lb[1]) + tuple(o[3:])
         tr = trim_px(side)
+        learned_now = False
+        lm = last_miss.get(side)
+        if lm is not None and AIM_LEARN:
+            b0, a0 = lm
+            mv = np.array([orig[1] - b0[0], orig[2] - b0[1]], float)
+            if np.linalg.norm(mv) < 25:                                  # the same block came round again
+                last_miss[side] = None
+                if np.linalg.norm(mv) > AIM_MIN_MOVE:
+                    landed = np.asarray(b0, float) + mv / AIM_PUSH          # where the gripper really came down
+                    err = landed - np.asarray(a0, float)                    # vs where it aimed
+                    new = 0.7 * aim_err[side] + 0.3 * err      # single misses scatter: learn gradually
+                    nrm = np.linalg.norm(new)
+                    aim_err[side] = new * min(1.0, AIM_MAX / nrm) if nrm > 0 else new
+                    learned_now = True
+                    say(side, f"   the miss pushed the block {np.linalg.norm(mv):.0f} px -> the gripper lands "
+                              f"({err[0]:+.0f},{err[1]:+.0f}) px off its aim; this arm now corrects by "
+                              f"({-aim_err[side][0]:+.0f},{-aim_err[side][1]:+.0f}) px")
+        tr = tr - aim_err[side]
         bu, bv = ARM_BASE_PX[side]
         hdg = np.array([o[1] - bu, o[2] - bv], float)
         hdg /= (np.linalg.norm(hdg) + 1e-9)
@@ -1362,7 +1391,7 @@ def run_both():
         jo = JAW_OFFSET.get(side, 0.0)
         if jo:
             tr = tr - left_of * jo * PX_PER_CM
-        if n:                                              # retry: nudge the grab 1 cm, a different way each time
+        if n and not learned_now:                          # retry: nudge the grab 1 cm, a different way each time
             # 26 Nov pm: the right arm's 7th try nudged 1 cm TOWARDS a red cube 2 cm away, grabbed the red cube and
             # put it in the yellow bin. A nudge may never bring the jaws closer to another block (or the line):
             others = [(q[1], q[2]) for q in det["objects"] if math.hypot(q[1] - orig[1], q[2] - orig[2]) > 6]
@@ -1649,6 +1678,9 @@ def run_both():
                     pass                                     # Round 3: the judge moved it - not a miss
                 else:
                     stats["miss"] += 1
+                    r_ = last_rec.get(side) or {}
+                    if "u_aim" in r_:
+                        last_miss[side] = ((r_["u"], r_["v"]), (r_["u_aim"], r_["v_aim"]))
                     key = next((d for d in deferred if math.hypot(o[1] - d[0], o[2] - d[1]) < 15), (o[1], o[2]))
                     deferred[key] = deferred.get(key, 0) + (99 if result == "blocked" else 1)
         say(side, "time is up (no new picks in the last %.0f s, so everything is finished at the end)" % FINISH_S if time.time() >= t_end - FINISH_S else "stopped")

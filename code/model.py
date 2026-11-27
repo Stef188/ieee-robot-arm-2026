@@ -414,7 +414,9 @@ class ArmMap:
         picture), the arm next to a spot drops whatever bin colour now stands there. None = not on a known spot."""
         # 26 Nov 19:45: any stored spot of this arm, hand-taught ones too (taught bins used to ignore the camera);
         # at the same spot a hand-taught pose wins over the demo one, whatever bin colour stands there
-        near = [(math.hypot(s["u"] - u, s["v"] - v) - (5 if s.get("taught") else 0), name)
+        # 27 Nov (competition): a spot taught HERE wins clearly over the old lab spots (a full bin is seen ~20 px off
+        # its centre, and the lab spot right next to it won -> drops at the old pose, beside the bin)
+        near = [(math.hypot(s["u"] - u, s["v"] - v) - (30 if s.get("taught") else 0), name)
                 for name, s in self.bins.items() if "u" in s]
         near = [t for t in near if t[0] < SLOT_R]
         return min(near)[1] if near else None
