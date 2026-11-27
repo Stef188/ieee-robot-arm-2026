@@ -169,9 +169,39 @@ def plan(o, m, bin_xy):
         g, h = m.poses(u, v, ang)
     # Round 3: a bin standing on one of our known spots uses that spot's tested pose; anywhere else the learned drop
     # model (drop_model.py) gives the pose for wherever the camera sees the bin
-    dm = drop_model(m.side) if DYNAMIC else None
+    # 27 Nov (competition): BIN TRACKING in every round - the drop follows where the camera sees the bin NOW, aimed at
+    # the BACK-MIDDLE of the bin (BIN_BACK px past its centre, away from this arm: drops landed short). On a known spot:
+    # that spot's tested pose, moved by the drop model's change between the spot and the bin's real place.
+    track = DYNAMIC or BIN_TRACK
+    dm = drop_model(m.side) if track else None
     on_spot = hasattr(m, "bin_slot") and m.bin_slot(colour, *bin_xy) is not None
-    bh = dm.pose(*bin_xy) if (dm is not None and not on_spot and dm.covers(*bin_xy)) else m.bin_hover(colour, *bin_xy)
+    target = tuple(bin_xy[:2])
+    if track and BIN_BACK:
+        bx, by = ARM_BASE_PX[m.side]
+        dd = math.hypot(bin_xy[0] - bx, bin_xy[1] - by)
+        if dd > 1:
+            target = (bin_xy[0] + BIN_BACK * (bin_xy[0] - bx) / dd, bin_xy[1] + BIN_BACK * (bin_xy[1] - by) / dd)
+    if dm is not None:
+        # the drop model's lift is a quadratic in the distance from the base: beyond its peak (few demo drops that far
+        # out) it turns back down - never aim further out than the peak
+        W = np.asarray(dm.d["W"], float)
+        if W[2][0] < 0:
+            r_peak = dm.d["r0"] + 100.0 * (-W[1][0] / (2 * W[2][0])) - 3
+            bx, by = dm.d["bu"], dm.d["bv"]
+            rt = math.hypot(target[0] - bx, target[1] - by)
+            if rt > r_peak > 0:
+                target = (bx + (target[0] - bx) * r_peak / rt, by + (target[1] - by) * r_peak / rt)
+    pan_done = False
+    if dm is not None and on_spot:
+        bh = m.bin_hover(colour, *bin_xy)
+        sp = m.bins.get(m.bin_slot(colour, *bin_xy), {})
+        if bh is not None and "u" in sp and dm.covers(*target) and dm.covers(sp["u"], sp["v"]):
+            bh = np.asarray(bh, float) + (dm.pose(*target) - dm.pose(sp["u"], sp["v"]))
+    elif dm is not None and dm.covers(*target):
+        bh = dm.pose(*target)
+    else:
+        bh = m.bin_hover(colour, *bin_xy)
+        pan_done = bh is not None and not on_spot         # interpolated by m.poses(): turn correction already in
     rest = m.rest[:5]
     high = above_pose(m, g, h, UP_K)               # HIGH start: well above the object, then straight down
     # 26 Nov pm: per-bin settings belong to the bin SPOT (model.bin_slot), so swapped bin colours keep the drop height,
@@ -188,7 +218,7 @@ def plan(o, m, bin_xy):
         # 26 Nov pm: turn to the bin's REAL centre (geometric pan at the bin seen by the camera), not the demo median
         drop = np.array(drop, float)
         bin_high = np.array(bin_high, float)
-        drop[0] = bin_high[0] = m.pan_geo(*bin_xy)
+        drop[0] = bin_high[0] = m.pan_geo(*target)
     pan_adj = drop_pan_for(m.side, slot)
     if drop is not None and not taught and pan_adj:
         # 26 Nov pm (Peter: left green still lands LEFT of the bin at the bin-centre turn - the block sits against
@@ -216,6 +246,13 @@ def plan(o, m, bin_xy):
     if bin_high is not None and drop is not None:
         bin_high = np.array(bin_high, float)
         bin_high[4] = drop[4]
+    # 27 Nov (competition): the arm base is turned vs the lab - the same turn correction as the grabs (SORT_PAN_<side>)
+    po = 0.0 if pan_done else pan_offset(m.side)
+    if po:
+        dpo = np.array([po, 0, 0, 0, 0], float)
+        drop = None if drop is None else np.asarray(drop, float) + dpo
+        bin_low = None if bin_low is None else np.asarray(bin_low, float) + dpo
+        bin_high = None if bin_high is None else np.asarray(bin_high, float) + dpo
     return dict(hover=high, grasp=g_deep, grasp_demo=g, bin=drop, bin_low=bin_low, bin_high=bin_high, slot=slot,
                 mid1=(high + rest) / 2, mid2=None if drop is None else (drop + rest) / 2, rest=rest,
                 low=above_pose(m, g, h, 0.25))     # just above the object (last check before closing)
@@ -781,6 +818,16 @@ HOME_TOL = float(os.environ.get("SORT_HOME_TOL") or 12)   # deg: an arm only fre
 #   near its rest pose (pan / lift / elbow within this) - at speed it lags behind its commands
 HANDOFF = os.environ.get("SORT_HANDOFF", "1") == "1"
 DYNAMIC = os.environ.get("SORT_RULE", "colour").lower() == "dynamic"   # Round 3: shape rule + MOVING bins / blocks
+BIN_TRACK = os.environ.get("SORT_BIN_TRACK", "1") == "1"   # 27 Nov: every round drops where the bin is NOW (camera)
+BIN_BACK = float(os.environ.get("SORT_BIN_BACK") or 10)    # px (~1.2 cm): aim past the bin centre, away from the arm
+
+
+def pan_offset(side):
+    """27 Nov (competition): SORT_PAN_LEFT / SORT_PAN_RIGHT - the arm base is turned vs the lab (degrees)."""
+    try:
+        return float(os.environ.get(f"SORT_PAN_{side.upper()}") or 0)
+    except ValueError:
+        return 0.0
 SHAPE_RULE = os.environ.get("SORT_RULE", "colour").lower() in ("shape", "dynamic")   # Round 2/3: sort by SHAPE
 SHAPE_MIN = float(os.environ.get("SORT_SHAPE_MIN") or 0.5)   # below this confidence the block waits for a better look
 BIN_MEMORY = os.environ.get("SORT_BIN_MEMORY", "0" if DYNAMIC else "1") == "1"   # off in Round 3: bins move   # a bin the camera loses (full of mixed blocks) stays
@@ -873,7 +920,7 @@ def drop_model(side):
 
 def bin_ok(m, colour, bu, bv):
     """Can this arm drop into a bin of `colour` seen at (bu, bv)? Round 3: anywhere its drop model covers."""
-    if DYNAMIC:
+    if DYNAMIC or BIN_TRACK:
         if hasattr(m, "bin_slot") and m.bin_slot(colour, bu, bv) is not None:
             return True                                   # on one of this arm's known spots
         dm = drop_model(m.side)
@@ -1149,7 +1196,7 @@ def run_both():
     for s, a in arms.items():
         a.connect()
         maps[s].widen_limits(UP_K, DROP_UP)
-        if DYNAMIC and drop_model(s) is not None and maps[s].up is not None:
+        if (DYNAMIC or BIN_TRACK) and drop_model(s) is not None and maps[s].up is not None:
             # 26 Nov 21:40: the drop model's poses (and the high approach) must not be clipped by the joint limits
             dm, upv = drop_model(s), np.asarray(maps[s].up[:5])
             Q = [dm.pose(u, v) + k * upv for u in range(180, 541, 15) for v in range(220, 341, 15) if dm.covers(u, v)
@@ -1379,7 +1426,7 @@ def run_both():
         # 26 Nov pm (Peter: the arms hit the bins going down): straight to the drop pose HIGH above the bin, wait until
         # still (opening while moving throws the block), JUST OPEN, go home. No going down into the bin.
         # (SORT_DROP_LOW=1 = the old way: down to the demo let-go pose first.)
-        if DYNAMIC:
+        if DYNAMIC or BIN_TRACK:
             # Round 3: the judge may have moved the bin during the carry - re-aim at where the camera sees it NOW
             b_now = (scan.get("det") or {"bins": {}})["bins"].get(colour)
             if b_now is None:
