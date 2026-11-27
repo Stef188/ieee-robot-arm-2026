@@ -223,6 +223,8 @@ def plan(o, m, bin_xy):
     if dm is not None and on_spot:
         bh = m.bin_hover(colour, *bin_xy)
         sp = m.bins.get(m.bin_slot(colour, *bin_xy), {})
+        if sp.get("taught"):
+            target = tuple(bin_xy[:2])        # 27 Nov: a hand-taught drop is the exact spot - only follow the bin's move
         if bh is not None and "u" in sp and dm.covers(*target) and dm.covers(sp["u"], sp["v"]):
             bh = np.asarray(bh, float) + (dm.pose(*target) - dm.pose(sp["u"], sp["v"]))
     elif dm is not None and dm.covers(*target):
@@ -282,7 +284,7 @@ def plan(o, m, bin_xy):
         bin_low = None if bin_low is None else np.asarray(bin_low, float) + dpo
         bin_high = None if bin_high is None else np.asarray(bin_high, float) + dpo
     # 27 Nov (competition): reach further into the bin - the back-centre, not the front (SORT_DROP_REACH px)
-    if DROP_REACH and drop is not None:
+    if DROP_REACH and drop is not None and not taught:     # a hand-taught drop pose is used exactly as taught
         _dq = reach_push(m.side, bin_xy, DROP_REACH)
         if _dq is not None:
             drop = np.asarray(drop, float) + _dq
