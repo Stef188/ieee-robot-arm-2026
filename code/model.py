@@ -357,6 +357,12 @@ class ArmMap:
         if self.pan_geo is not None:          # 26 Nov pm: geometric pan (see _fit_pan_geo), same for grab and hover
             g[0] = h[0] = self.pan_geo(u, v)
         dp = self.pan_fix(u, v)
+        # 27 Nov (competition): the arm base is clamped slightly TURNED vs the lab - a constant pan offset per arm
+        # (SORT_PAN_LEFT / SORT_PAN_RIGHT, degrees, measured from grabs taught here: fit_offset.py)
+        try:
+            dp += float(os.environ.get(f"SORT_PAN_{self.side.upper()}") or 0)
+        except ValueError:
+            pass
         g[0] += dp
         h[0] += dp
         if self.roll_offset:

@@ -72,7 +72,8 @@ try:
         hover = q + 2.0 * up
         calib["points"].append({"u": float(o[1]), "v": float(o[2]), "angle": float(o[3]), "area": float(o[4]),
                                 "colour": o[0], "grasp": [float(x) for x in q], "hover": [float(x) for x in hover],
-                                "wrist": None, "demo": None, "taught": True, "w": 3})
+                                "wrist": None, "demo": None, "taught": True, "w": 3,
+                                "time": time.strftime("%Y-%m-%d %H:%M")})     # 27 Nov: FIT_OFFSET.bat uses the time
         path.write_text(json.dumps(calib, indent=1))
         n += 1
         print(f"   saved spot {n}: joints {np.round(q[:5], 1).tolist()}")
