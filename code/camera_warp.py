@@ -166,22 +166,62 @@ def main():
                      "X delete correction   S save view as reference   Q quit"] + \
                     ([] if ref is not None else ["(no reference picture yet - in the lab, table clear: press S)"])
 
-        def on_mouse(ev, x, y, flags, _):
-            if ev == cv2.EVENT_LBUTTONDOWN and st["clicking"]:
-                st["clicks"].append((x / Z, y / Z))
+        # 27 Nov: a tkinter window (this OpenCV is the headless build - no cv2 windows), like tools	kview.py
+        import tkinter as tk
+        from PIL import Image, ImageTk
+        root = tk.Tk()
+        root.title("TOP CAMERA ALIGNMENT - Q to quit")
+        label = tk.Label(root, cursor="crosshair")
+        label.pack()
+        st["open"] = True
+        st["ref"] = ref
+
+        def on_click(e):
+            if st["clicking"]:
+                st["clicks"].append((e.x / Z, e.y / Z))
                 if len(st["clicks"]) == 4:
                     st["clicking"] = False
                     st["msg"], st["err"] = advice(st["clicks"])
                     st["last"] = list(st["clicks"])
-                    print("\n".join(st["msg"]))
-        win = "TOP CAMERA ALIGNMENT"
-        cv2.namedWindow(win)
-        cv2.setMouseCallback(win, on_mouse)
-        while True:
+                    print(chr(10).join(st["msg"]))
+
+        def on_key(e):
+            global _H, _loaded
+            k = (e.char or "").lower()
+            if k == "q" or e.keysym == "Escape":
+                st["open"] = False
+            elif k == "c":
+                st.update(clicks=[], clicking=True, corrected=False)
+            elif k == "g":
+                st["ghost"] = not st["ghost"]
+            elif k == "v":
+                st["corrected"] = not st["corrected"]
+            elif k == "w":
+                if st["last"] is None:
+                    st["msg"] = ["press C and click the 4 corners first"]
+                else:
+                    save_warp(st["last"], st["err"])
+                    st["msg"] = ["software correction SAVED - press V to see what the sorter will see"]
+            elif k == "x":
+                if WARP_FILE.exists():
+                    WARP_FILE.rename(HERE / f"camera_warp_removed_{time.strftime('%m%d_%H%M%S')}.json")
+                _H, _loaded = None, True
+                st["msg"] = ["software correction removed (old file kept as camera_warp_removed_*.json)"]
+            elif k == "s":
+                save_reference(st["raw"])
+                st["ref"] = cv2.imread(str(REF_IMG))
+                st["ghost"] = True
+                st["msg"] = ["this view is now the reference picture (ghost)"]
+
+        label.bind("<Button-1>", on_click)
+        root.bind("<Key>", on_key)
+        root.protocol("WM_DELETE_WINDOW", lambda: st.update(open=False))
+        while st["open"]:
             raw = cam.grab(raw=True)
+            st["raw"] = raw
             img = apply(raw) if st["corrected"] else raw.copy()
-            if st["ghost"] and ref is not None:
-                img = cv2.addWeighted(img, 0.6, ref, 0.4, 0)
+            if st["ghost"] and st["ref"] is not None:
+                img = cv2.addWeighted(img, 0.6, st["ref"], 0.4, 0)
             draw_overlay(img, cv2)
             for (u, v) in st["clicks"]:
                 cv2.drawMarker(img, (int(u), int(v)), (0, 0, 255), cv2.MARKER_TILTED_CROSS, 12, 2)
@@ -194,33 +234,11 @@ def main():
             for i, t in enumerate(head):
                 cv2.putText(big, t, (8, 20 + 20 * i), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3)
                 cv2.putText(big, t, (8, 20 + 20 * i), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-            cv2.imshow(win, big)
-            k = cv2.waitKey(30) & 0xFF
-            if k in (ord("q"), 27):
-                break
-            elif k == ord("c"):
-                st.update(clicks=[], clicking=True, corrected=False)
-            elif k == ord("g"):
-                st["ghost"] = not st["ghost"]
-            elif k == ord("v"):
-                st["corrected"] = not st["corrected"]
-            elif k == ord("w"):
-                if st["last"] is None:
-                    st["msg"] = ["press C and click the 4 corners first"]
-                else:
-                    save_warp(st["last"], st["err"])
-                    st["msg"] = ["software correction SAVED - press V to see what the sorter will see"]
-            elif k == ord("x"):
-                if WARP_FILE.exists():
-                    WARP_FILE.rename(HERE / f"camera_warp_removed_{time.strftime('%m%d_%H%M%S')}.json")
-                global _H, _loaded
-                _H, _loaded = None, True
-                st["msg"] = ["software correction removed (old file kept as camera_warp_removed_*.json)"]
-            elif k == ord("s"):
-                save_reference(raw)
-                ref = cv2.imread(str(REF_IMG))
-                st["msg"] = ["this view is now the reference picture (ghost)"]
-        cv2.destroyAllWindows()
+            photo = ImageTk.PhotoImage(Image.fromarray(cv2.cvtColor(big, cv2.COLOR_BGR2RGB)))
+            label.configure(image=photo)
+            label.image = photo
+            root.update()
+        root.destroy()
     finally:
         cam.disconnect()
 
