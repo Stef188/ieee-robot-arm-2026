@@ -9,4 +9,4 @@ Dataset  : ieee_pour - 75 teleoperated demonstrations (leader/follower SO-ARM100
 Inference: on the laptop wired to the arms only, no network (training-notes/RUN.bat).
 
 models/ and data/: the model (207 MB) and dataset (~100k frames) are larger than GitHub's 100 MB file
-limit; they are kept on the team laptop and shared with the judges through Google Drive: https://drive.google.com/drive/folders/1gd8YXZgm0Au0U2eF7QpH1w4wVOUOklzp (access on request)
+limit; they are kept on the team laptop and shared with the judges through Google Drive: https://drive.google.com/drive/folders/18T76qVBEAcmT0PJbPxyNHgqOAVj7Pmiq?usp=drive_link (access on request)

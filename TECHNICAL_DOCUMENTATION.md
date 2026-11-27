@@ -404,7 +404,7 @@ component; everything else is trained from scratch on our own demonstrations.
 
 **e. Code and weights.** LeRobot (open source) plus our `RECORD`/`TRAIN`/`RUN` scripts in each round's
 `training-notes/`. The weights (207 MB per model) are above GitHub's file limit, so they are shared with the judges on Google Drive:
-https://drive.google.com/drive/folders/1gd8YXZgm0Au0U2eF7QpH1w4wVOUOklzp (access on request).
+https://drive.google.com/drive/folders/18T76qVBEAcmT0PJbPxyNHgqOAVj7Pmiq?usp=drive_link (access on request).
 
 **f. Autonomy.** Perception and decision-making are learned end to end. The policy sees the cup/cloth and both
 grippers in the camera images and outputs both arms' motions; there is no hand-written trajectory.

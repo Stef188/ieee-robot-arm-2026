@@ -32,17 +32,17 @@ FOLDERS
      videos/          see videos/README.txt
 
 EXTERNAL / LARGE FILES (raw LeRobot datasets, too large for GitHub)
-  ieee_colour_v2      (202 episodes, colour-sorting demonstrations):   Google Drive (access on request): https://drive.google.com/drive/folders/1gd8YXZgm0Au0U2eF7QpH1w4wVOUOklzp
-  ieee_shape_clean    (229 episodes, shape-sorting demonstrations):    Google Drive (access on request): https://drive.google.com/drive/folders/1gd8YXZgm0Au0U2eF7QpH1w4wVOUOklzp
-  ieee_shape_v2       (33 episodes):                                   Google Drive (access on request): https://drive.google.com/drive/folders/1gd8YXZgm0Au0U2eF7QpH1w4wVOUOklzp
+  ieee_colour_v2      (202 episodes, colour-sorting demonstrations):   Google Drive (access on request): https://drive.google.com/drive/folders/18T76qVBEAcmT0PJbPxyNHgqOAVj7Pmiq?usp=drive_link
+  ieee_shape_clean    (229 episodes, shape-sorting demonstrations):    Google Drive (access on request): https://drive.google.com/drive/folders/18T76qVBEAcmT0PJbPxyNHgqOAVj7Pmiq?usp=drive_link
+  ieee_shape_v2       (33 episodes):                                   Google Drive (access on request): https://drive.google.com/drive/folders/18T76qVBEAcmT0PJbPxyNHgqOAVj7Pmiq?usp=drive_link
 
 GAME 2 (Two-Arm Coordination) - imitation learning, LeRobot ACT
   Game_02_Round_01 = Pouring  : ACT 200k steps on ieee_pour (75 demos, 101k frames, 3 cameras)
   Game_02_Round_02 = Folding  : ACT 200k steps on ieee_fold_new_clean (43 demos, 56k frames, 3 cameras)
   Model weights (207 MB each) and datasets are larger than GitHub's limit: kept on the team laptop,
-  Google Drive: https://drive.google.com/drive/folders/1gd8YXZgm0Au0U2eF7QpH1w4wVOUOklzp . Details: each round's README.txt and TECHNICAL_DOCUMENTATION.md (Game 2).
+  Google Drive: https://drive.google.com/drive/folders/18T76qVBEAcmT0PJbPxyNHgqOAVj7Pmiq?usp=drive_link . Details: each round's README.txt and TECHNICAL_DOCUMENTATION.md (Game 2).
 
-DATASETS AND MODEL WEIGHTS (all games): https://drive.google.com/drive/folders/1gd8YXZgm0Au0U2eF7QpH1w4wVOUOklzp
+DATASETS AND MODEL WEIGHTS (all games): https://drive.google.com/drive/folders/18T76qVBEAcmT0PJbPxyNHgqOAVj7Pmiq?usp=drive_link
   datasets/ ieee_colour_v2, ieee_shape_clean, ieee_shape_v2, ieee_pour, ieee_fold_new_clean, classical_shape_data
   models/   ACT policies: pour 200k, fold 200k, colour 200k + 139-demo 20k fine-tune, shape 110k
   (README.txt in the Drive folder explains each zip.) Access is restricted - judges are added on request.
