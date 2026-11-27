@@ -1124,7 +1124,9 @@ def choose_task(side, det, maps, deferred, other_claim, busy, spots, put_down=()
         if colour == "?":
             ev = o[10] if len(o) > 10 else -9
             conf_ok = len(o) > 9 and o[9] >= shape_min(o[8], relaxed=True)
-            if relax_shape and len(o) > 9 and ((conf_ok and ev >= EV_RELAX) or (desperate and conf_ok and ev >= EV_DESPERATE)):
+            # 27 Nov (competition): after IDLE_MAX the last-resort pass takes ANY block with positive expected points
+            # (no confidence floor - the arms sat idle for minutes with 13 of 16 blocks "not sure")
+            if relax_shape and len(o) > 9 and ((conf_ok and ev >= EV_RELAX) or (desperate and ev > EV_DESPERATE)):
                 import shape_model as SM
                 o = (SM.SHAPE_TO_BIN[o[8]],) + tuple(o[1:])      # nothing sure left: take its best guess
                 colour = o[0]

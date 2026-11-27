@@ -20,7 +20,9 @@ set SORT_UP=2.0
 set SORT_ALIGN=0
 set SORT_BIN_CLEAR=20
 REM 26 Nov 20:00: right-arm trim OFF - its taught grabs are at block centres, the trim aimed 1.1 cm away from them
-set SORT_TRIM_RIGHT=0,0
+REM 27 Nov 18:50 (competition): grabs landed ~1 cm to the RIGHT of the blocks -> aim 1 cm LEFT (camera picture)
+if not defined SORT_TRIM_LEFT set SORT_TRIM_LEFT=-1,0
+if not defined SORT_TRIM_RIGHT set SORT_TRIM_RIGHT=-1,0
 REM 27 Nov (competition): left arm base clamped ~6 deg turned vs the lab (6 grabs taught here, fit_offset.py)
 if not defined SORT_PAN_LEFT set SORT_PAN_LEFT=8
 if not defined SORT_PAN_RIGHT set SORT_PAN_RIGHT=1
@@ -29,6 +31,8 @@ REM Still landing at the front -> raise it (30, 40). Touching the far rim -> low
 if not defined SORT_DROP_REACH set SORT_DROP_REACH=20
 REM 27 Nov (competition): 3 tries per block - retries search 1 cm right, then left (sideways scatter)
 if not defined SORT_MAX_TRIES set SORT_MAX_TRIES=3
+REM 27 Nov 18:50: an idle arm takes the best positive-points block after 1 s (conflict waits are separate)
+if not defined SORT_IDLE_MAX set SORT_IDLE_MAX=1
 set SORT_APPROACH_OFFSET=0
 set S=%1
 if "%S%"=="" set S=300
