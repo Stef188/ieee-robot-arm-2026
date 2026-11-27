@@ -11,4 +11,4 @@ Dataset  : ieee_fold_new_clean - 43 teleoperated two-arm demonstrations with the
 Inference: on the laptop wired to the arms only, no network (training-notes/RUN.bat).
 
 models/ and data/: the model (207 MB) and dataset are larger than GitHub's 100 MB file limit; they are kept
-on the team laptop and shared with the judges through a secure link on request.
+on the team laptop and shared with the judges through Google Drive: https://drive.google.com/drive/folders/1gd8YXZgm0Au0U2eF7QpH1w4wVOUOklzp (access on request)
