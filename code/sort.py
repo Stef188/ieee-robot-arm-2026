@@ -160,6 +160,34 @@ def shape_of(o):
     return "block"
 
 
+
+DROP_REACH = float(os.environ.get("SORT_DROP_REACH") or 25)   # px (~3 cm): 27 Nov (competition) - drops landed at the
+#   FRONT of the bins: push every drop pose this far further out (towards the back wall), along the arm's real
+#   "reach further" joint direction learned from the 1,053 demo drops (drop_model.py), keeping the drop height
+
+
+def reach_push(side, bin_xy, px):
+    """Joint change that moves the gripper `px` pixels further out from the arm at the bin's heading (pan unchanged)."""
+    try:
+        import drop_model as _DM
+        d = _DM.DropModel.load(side)
+    except Exception:
+        return None
+    W = np.asarray(d.d["W"], float)
+    bx, by = d.d["bu"], d.d["bv"]
+    rp = d.d["r0"] + 100.0 * (-W[1][0] / (2 * W[2][0])) if W[2][0] < 0 else d.d["r_max"]
+    r = math.hypot(bin_xy[0] - bx, bin_xy[1] - by)
+    if r < 1:
+        return None
+    hx, hy = (bin_xy[0] - bx) / r, (bin_xy[1] - by) / r
+    r1, r2 = rp - 35, rp - 5                      # the reliable part of the model just before its peak
+    q1 = d.pose(bx + hx * r1, by + hy * r1)
+    q2 = d.pose(bx + hx * r2, by + hy * r2)
+    dq = (q2 - q1) / (r2 - r1) * px
+    dq[0] = 0.0                                   # the turn stays as it is
+    dq[4] = 0.0                                   # wrist roll too
+    return dq
+
 def plan(o, m, bin_xy):
     colour, u, v, ang = o[0], o[1], o[2], o[3]
     if shape_of(o) == "long":
@@ -253,6 +281,13 @@ def plan(o, m, bin_xy):
         drop = None if drop is None else np.asarray(drop, float) + dpo
         bin_low = None if bin_low is None else np.asarray(bin_low, float) + dpo
         bin_high = None if bin_high is None else np.asarray(bin_high, float) + dpo
+    # 27 Nov (competition): reach further into the bin - the back-centre, not the front (SORT_DROP_REACH px)
+    if DROP_REACH and drop is not None:
+        _dq = reach_push(m.side, bin_xy, DROP_REACH)
+        if _dq is not None:
+            drop = np.asarray(drop, float) + _dq
+            bin_low = None if bin_low is None else np.asarray(bin_low, float) + _dq
+            bin_high = None if bin_high is None else np.asarray(bin_high, float) + _dq
     return dict(hover=high, grasp=g_deep, grasp_demo=g, bin=drop, bin_low=bin_low, bin_high=bin_high, slot=slot,
                 mid1=(high + rest) / 2, mid2=None if drop is None else (drop + rest) / 2, rest=rest,
                 low=above_pose(m, g, h, 0.25))     # just above the object (last check before closing)

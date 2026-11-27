@@ -22,8 +22,11 @@ set SORT_BIN_CLEAR=20
 REM 26 Nov 20:00: right-arm trim OFF - its taught grabs are at block centres, the trim aimed 1.1 cm away from them
 set SORT_TRIM_RIGHT=0,0
 REM 27 Nov (competition): left arm base clamped ~6 deg turned vs the lab (6 grabs taught here, fit_offset.py)
-if not defined SORT_PAN_LEFT set SORT_PAN_LEFT=6
+if not defined SORT_PAN_LEFT set SORT_PAN_LEFT=8
 if not defined SORT_PAN_RIGHT set SORT_PAN_RIGHT=1
+REM 27 Nov (competition): drops reach this many px (about 8 px = 1 cm) further into the bin, towards its BACK wall.
+REM Still landing at the front -> raise it (30, 40). Touching the far rim -> lower it (10).
+if not defined SORT_DROP_REACH set SORT_DROP_REACH=20
 REM 27 Nov (competition): 3 tries per block - retries search 1 cm right, then left (sideways scatter)
 if not defined SORT_MAX_TRIES set SORT_MAX_TRIES=3
 set SORT_APPROACH_OFFSET=0
