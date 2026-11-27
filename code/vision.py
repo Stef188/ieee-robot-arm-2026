@@ -10,6 +10,7 @@ python classical\\vision.py <image.png> [...]   -> writes <image>_vision.png wit
 import sys
 from pathlib import Path
 
+import os
 import cv2
 import numpy as np
 
@@ -131,6 +132,9 @@ def detect(img):
     bin_zone = cv2.dilate(bin_masks, np.ones((15, 15), np.uint8))
     source = np.zeros(img.shape[:2], np.uint8)
     cv2.fillPoly(source, [SOURCE_POLY], 255)
+    _out = int(float(os.environ.get("SORT_OUTSIDE_PX") or 45))
+    if _out > 0:   # 27 Nov 19:35 (user): also blocks just OUTSIDE the line beside the arms (SORT_OUTSIDE_PX=0 = off)
+        source = cv2.dilate(source, np.ones((2 * _out + 1, 2 * _out + 1), np.uint8))
     for name in COLOURS:
         # 26 Nov: the source area only decides WHICH blocks count (by their centre) - it no longer CUTS a block that
         # sits on its border (a sliced outline = a shifted centre; the red dodecahedron at x~210 was cut in half)

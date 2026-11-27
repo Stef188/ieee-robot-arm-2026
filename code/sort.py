@@ -244,6 +244,8 @@ def plan(o, m, bin_xy):
     if taught and bh is not None and m.up is not None:
         # 26 Nov 19:45: a hand-taught (e.g. fully stretched) drop pose is approached from above, never sideways
         bin_high = np.array(bh, float) + TAUGHT_APPROACH * m.up
+        # 27 Nov 19:30 (user: right arm touched the red bin, left the yellow one): open a little ABOVE the taught pose
+        drop = np.array(bh, float) + TAUGHT_DROP_UP * m.up
     if drop is not None and not taught and f"{m.side}:{slot}" in BIN_GEO and getattr(m, "pan_geo", None):
         # 26 Nov pm: turn to the bin's REAL centre (geometric pan at the bin seen by the camera), not the demo median
         drop = np.array(drop, float)
@@ -499,7 +501,7 @@ def near_bin(u, v, det, margin=15):
     the open jaws hit them (Peter: the arms must NEVER touch the bins)."""
     import cv2
     for bu_, bv_ in ([] if DYNAMIC else known_bin_spots()):      # Round 3: bins move - only what the camera sees
-        if math.hypot(u - bu_, v - bv_) < KNOWN_BIN_R + margin:
+        if math.hypot(u - bu_, v - bv_) < KNOWN_BIN_R + min(margin, 8):    # the bin itself (+ a little), not 2 cm around
             return True
     for b in det["bins"].values():
         cx, cy, w, h = b[:4]
@@ -933,11 +935,15 @@ IDLE_MAX = float(os.environ.get("SORT_IDLE_MAX") or 2)    # s: 26 Nov 22:00 (Pet
 #   this an arm takes a LAST-RESORT pick: best shape guess >= DESPERATE_MIN, 2 more tries for missed blocks, only blocks
 #   touching a bin (BIN_TOUCH) skipped, reach DESPERATE_MARGIN px outside its demo area. The black line still applies.
 DESPERATE_MIN = float(os.environ.get("SORT_DESPERATE_MIN") or 0.3)
-DESPERATE_MARGIN = float(os.environ.get("SORT_DESPERATE_MARGIN") or 40)
+DESPERATE_MARGIN = float(os.environ.get("SORT_DESPERATE_MARGIN") or 60)   # 27 Nov 19:35: idle arms reach further sideways
 BIN_TOUCH = float(os.environ.get("SORT_BIN_TOUCH") or 12)
 BLOCK_DEG = float(os.environ.get("SORT_BLOCK_DEG") or 8)  # arm stopped this far from the grab pose = it HIT something
 #   (a bin, a block, the other arm) - 26 Nov: right-arm grabs stopped 13-52 deg short next to bins
 MISS_LAST = int(os.environ.get("SORT_MISS_LAST") or 4)
+OUTSIDE_PX = float(os.environ.get("SORT_OUTSIDE_PX") or 45)   # px (~5.5 cm) outside the black line still picked (0 = off)
+TAUGHT_DROP_UP = float(os.environ.get("SORT_TAUGHT_DROP_UP") or 0.6)   # lift heights above a taught drop pose to open
+PROBES = int(os.environ.get("SORT_PROBES") or 4)          # 27 Nov: local self-correcting probes after a miss (0 = off)
+PROBE_CM = [(0, -1), (0, 1), (1, 0), (-1, 0)]             # (further, left) cm, as seen from the arm
 KNOWN_BIN_R = float(os.environ.get("SORT_KNOWN_BIN_R") or 28)   # px: radius around a taught bin spot that is "bin"   # a block missed this often goes behind every other block
 SHAPE_RANK = {"pentagonal_prism": 4, "dodecahedron": 3, "cylinder": 2, "cube": 1}   # shape round: picking order
 LINE_EDGE = float(os.environ.get("SORT_LINE_EDGE") or 4)   # px: the block's EDGE (not just its centre) must be this
@@ -1128,6 +1134,31 @@ def misses_at(deferred, u, v):
     return max([n for d, n in deferred.items() if math.hypot(u - d[0], v - d[1]) < 15], default=0)
 
 
+
+_KNOWN_BIN_COL = None
+
+
+def bins_with_known(det):
+    """27 Nov (competition): the bins the camera sees + every TAUGHT bin colour it does not see (a very full bin is not
+    recognised - every prism / cylinder for it was skipped). Not in Round 3: there the bins move."""
+    global _KNOWN_BIN_COL
+    bins = dict(det["bins"])
+    if DYNAMIC:
+        return bins
+    if _KNOWN_BIN_COL is None:
+        _KNOWN_BIN_COL = {}
+        for side in ("left", "right"):
+            try:
+                c = json.loads((HERE / f"calib_{side}.json").read_text())
+                for col, b in c.get("bins", {}).items():
+                    if b and b.get("taught") and str(b.get("time", "")).startswith("2026-11-27"):
+                        _KNOWN_BIN_COL[col] = (float(b["u"]), float(b["v"]), 60.0, 60.0, 0.0)
+            except Exception:
+                pass
+    for col, b in _KNOWN_BIN_COL.items():
+        bins.setdefault(col, b)
+    return bins
+
 def choose_task(side, det, maps, deferred, other_claim, busy, spots, put_down=(), margin=None, clear=35, why=None,
                 relax_shape=False, desperate=False):
     """Best job for THIS arm. busy = table strips this arm must stay out of (the other arm's current pick, or the one
@@ -1142,6 +1173,7 @@ def choose_task(side, det, maps, deferred, other_claim, busy, spots, put_down=()
     other = "right" if side == "left" else "left"
     mo = maps.get(other)
     tasks = []
+    bins_all = bins_with_known(det)      # 27 Nov: a bin too full to be recognised -> its taught spot
     for o in det["objects"]:
         colour, u, v = o[0], o[1], o[2]
         if colour == "?":
@@ -1157,14 +1189,13 @@ def choose_task(side, det, maps, deferred, other_claim, busy, spots, put_down=()
             else:
                 no("shape not sure yet")
                 continue
-        if colour not in det["bins"]:
+        if colour not in bins_all:
             no("no bin of its colour")
             continue
         if near_bin(u, v, det, margin=BIN_CLEAR):          # 26 Nov 22:25: also in the last-resort pass (it grabbed a bin)
             no("too close to a bin")
             continue
-        half = max(o[5] or 0, o[6] or 0) / 2.0 if len(o) > 6 else 0.0
-        if inside_line(u, v) < max(LINE_IN, half + LINE_EDGE):
+        if inside_line(u, v) < LINE_IN - OUTSIDE_PX:   # 27 Nov 19:35 (user): blocks next to / just outside the line too
             # 26 Nov pm (Peter: don't pick up objects outside the space): on or outside the black line = not ours
             # 26 Nov 23:30: measured to the block's EDGE - a block TOUCHING the line is not picked either
             no("on / outside the black line")
@@ -1182,7 +1213,7 @@ def choose_task(side, det, maps, deferred, other_claim, busy, spots, put_down=()
         if other_claim is not None and math.hypot(u - other_claim[0], v - other_claim[1]) < 25:
             no("the other arm is taking it")
             continue
-        bu, bv = det["bins"][colour][:2]
+        bu, bv = bins_all[colour][:2]
         m = maps[side]
         if m.reach(u, v) < -margin:
             no("out of this arm's reach")
@@ -1466,6 +1497,43 @@ def run_both():
                 break
             time.sleep(0.02)
         last_rec[side]["jaw"] = float(jaw)
+        if jaw < HOLD_MIN and PROBES:
+            # 27 Nov (competition): SELF-CORRECTION at the block - don't go home: open, lift a little, try 1 cm to each
+            # side / further / closer (as seen from the arm), coming down SLOWLY each time; the first probe that holds
+            # the block wins and the pick goes on from there. A probe that hits something stops the probing.
+            for k, (fa, lb) in enumerate(PROBE_CM[:PROBES]):
+                d = (hdg * fa + left_of * lb) * PX_PER_CM
+                o_pr = (o[0], o[1] + float(d[0]), o[2] + float(d[1])) + tuple(o[3:])
+                if inside_line(o_pr[1], o_pr[2]) < LINE_IN or near_bin(o_pr[1], o_pr[2], det, margin=5):
+                    continue
+                p_pr = plan(o_pr, m, bin_xy)
+                arm.move_to(with_grip(p["low"], hw.GRIP_OPEN), ZONE_SPEED, tol=4, settle=0.05, timeout=1.5)
+                arm.move_to(with_grip(p_pr["low"], hw.GRIP_OPEN), ZONE_SPEED, tol=3, settle=0.05, timeout=1.5)
+                arm.move_to(with_grip(p_pr["grasp"], hw.GRIP_OPEN), ZONE_SPEED * 0.5, tol=2.0, settle=0.15, timeout=3.0,
+                            stall=True)
+                q = arm.read()
+                if float(np.abs(np.asarray(q[1:4]) - np.asarray(p_pr["grasp"][1:4])).max()) > BLOCK_DEG:
+                    say(side, f"   probe {k + 1}: hit something - stop probing")
+                    break
+                arm.send(np.r_[np.asarray(q[:5], float), hw.GRIP_CLOSED])
+                t0 = time.time()
+                prev, steady = None, 0
+                while time.time() - t0 < CLOSE_WAIT + 0.8:
+                    jaw = arm.read()[5]
+                    if jaw < HOLD_MIN:
+                        break
+                    steady = steady + 1 if prev is not None and abs(jaw - prev) < 0.6 else 0
+                    prev = jaw
+                    if steady >= 3 and time.time() - t0 > 0.15 and jaw < hw.GRIP_OPEN - 10:
+                        break
+                    time.sleep(0.02)
+                say(side, f"   probe {k + 1}: {fa:+d} cm further / {lb:+d} cm left -> jaw {jaw:.1f}"
+                          + (" HOLDS IT" if jaw >= HOLD_MIN else ""))
+                if jaw >= HOLD_MIN:
+                    p = p_pr
+                    last_rec[side]["probe"] = [fa, lb]
+                    last_rec[side]["jaw"] = float(jaw)
+                    break
         if jaw < HOLD_MIN:
             say(side, f"   MISSED (jaw {jaw:.1f}) - next block, this one comes round again later")
             snap(f"{side}_top_MISSED", [(orig[1], orig[2], (255, 0, 255), 'object was here')])
@@ -1499,7 +1567,7 @@ def run_both():
         if DYNAMIC or BIN_TRACK:
             # Round 3: the judge may have moved the bin during the carry - re-aim at where the camera sees it NOW
             b_now = (scan.get("det") or {"bins": {}})["bins"].get(colour)
-            if b_now is None:
+            if b_now is None and DYNAMIC:              # 27 Nov: a full (unrecognised) bin in Round 2 = keep the aim, no wait
                 # 26 Nov 21:50: the judge may be CARRYING the bin (swapping bins) - wait above for it to reappear
                 say(side, f"   the {colour} bin is not in view (being moved?) - waiting up to {BIN_WAIT:.0f} s")
                 t_w = time.time()

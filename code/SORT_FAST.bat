@@ -12,7 +12,7 @@ if not defined SORT_SPEED set SORT_SPEED=100
 if not defined SORT_DESC set SORT_DESC=0.5
 if not defined SORT_LIFT set SORT_LIFT=1.0
 if not defined SORT_TRANSFER_SPEED set SORT_TRANSFER_SPEED=120
-if not defined SORT_GRIP_SPEED set SORT_GRIP_SPEED=300
+if not defined SORT_GRIP_SPEED set SORT_GRIP_SPEED=150
 set SORT_CLOSE_WAIT=0.25
 set SORT_OPEN_WAIT=0.1
 set SORT_WAIT_MAX=1.5
@@ -33,6 +33,8 @@ REM 27 Nov (competition): 3 tries per block - retries search 1 cm right, then le
 if not defined SORT_MAX_TRIES set SORT_MAX_TRIES=3
 REM 27 Nov 18:50: an idle arm takes the best positive-points block after 1 s (conflict waits are separate)
 if not defined SORT_IDLE_MAX set SORT_IDLE_MAX=1
+REM 27 Nov 19:30 (user: go slow on grappling): slower final approach + gentler close
+if not defined SORT_ZONE_SPEED set SORT_ZONE_SPEED=10
 set SORT_APPROACH_OFFSET=0
 set S=%1
 if "%S%"=="" set S=300
