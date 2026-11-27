@@ -20,6 +20,22 @@ PAN_GEO = os.environ.get("SORT_PAN", "geo") == "geo"   # 26 Nov pm: geometric pa
 SLOT_R = float(os.environ.get("SORT_SLOT_R") or 35)   # px (~4 cm): a bin this close to a stored bin spot uses that spot's drop pose
 
 
+_ROLL_GEO = {}
+
+
+def _roll_geo(side):
+    """roll_geo.json (fit_roll.py) for this arm, or None (also when SORT_GEO_ROLL=0)."""
+    if os.environ.get("SORT_GEO_ROLL", "1") == "0":
+        return None
+    if side not in _ROLL_GEO:
+        p = HERE / "roll_geo.json"
+        try:
+            _ROLL_GEO[side] = json.loads(p.read_text()).get(side) if p.exists() else None
+        except Exception:
+            _ROLL_GEO[side] = None
+    return _ROLL_GEO[side]
+
+
 def fold(angle, period=90.0):
     """Object rotation folded to (-period/2, period/2]: a square looks the same every 90 deg."""
     a = (angle + period / 2) % period - period / 2
@@ -380,6 +396,16 @@ class ArmMap:
             d = -180.0 * np.sign(g[4])
             g[4] += d
             h[4] += d
+        geo = _roll_geo(self.side)
+        if geo is not None:
+            # 27 Nov (competition): MEASURED wrist geometry (fit_roll.py): roll = s * face angle + k * pan + c, taken at
+            # the equivalent turn (every `period` deg) closest to where the learned model would turn - least wrist travel
+            r = geo["s"] * float(angle) + geo["k"] * float(g[0]) + geo["c"]
+            r = r + period * round((g[4] - r) / period)
+            if abs(r) > 170:
+                r -= period * np.sign(r)
+            h[4] += r - g[4]
+            g[4] = float(np.clip(r, -170, 170))
         return g, h
 
     def bin_slot(self, colour, u, v):

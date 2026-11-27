@@ -1143,7 +1143,9 @@ def choose_task(side, det, maps, deferred, other_claim, busy, spots, put_down=()
             # 26 Nov 23:30: measured to the block's EDGE - a block TOUCHING the line is not picked either
             no("on / outside the black line")
             continue
-        if misses_at(deferred, u, v) >= MAX_TRIES + (2 if desperate else 0):
+        # 27 Nov (competition): no extra last-resort tries once a block has had 3 - it kept going back to the same
+        # lying cylinder 5 times at the end of a run ("searching the middle for no reason")
+        if misses_at(deferred, u, v) >= MAX_TRIES + (2 if desperate and MAX_TRIES < 3 else 0):
             # 26 Nov 19:00: all of today's runs - first tries work ~40 %, retries ~7 % (15 of ~210); one cube got 13
             # tries in a row. A block is tried at most MAX_TRIES times, then left alone.
             no(f"missed {MAX_TRIES}x - left alone")
