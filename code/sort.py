@@ -940,7 +940,8 @@ BIN_TOUCH = float(os.environ.get("SORT_BIN_TOUCH") or 12)
 BLOCK_DEG = float(os.environ.get("SORT_BLOCK_DEG") or 8)  # arm stopped this far from the grab pose = it HIT something
 #   (a bin, a block, the other arm) - 26 Nov: right-arm grabs stopped 13-52 deg short next to bins
 MISS_LAST = int(os.environ.get("SORT_MISS_LAST") or 4)
-OUTSIDE_PX = float(os.environ.get("SORT_OUTSIDE_PX") or 45)   # px (~5.5 cm) outside the black line still picked (0 = off)
+OUTSIDE_PX = float(os.environ.get("SORT_OUTSIDE_PX") or 0)    # 27 Nov 19:50 (user): NOTHING outside the line (was 45)
+OUT_CLEAR = float(os.environ.get("SORT_OUT_CLEAR") or 30)      # px (~3.5 cm): keep the jaws this far from outside blocks
 TAUGHT_DROP_UP = float(os.environ.get("SORT_TAUGHT_DROP_UP") or 0.6)   # lift heights above a taught drop pose to open
 LAST_MIN = float(os.environ.get("SORT_LAST_MIN") or 0.5)   # last resort: most likely shape at least this sure
 PROBES = int(os.environ.get("SORT_PROBES") or 4)          # 27 Nov: local self-correcting probes after a miss (0 = off)
@@ -1198,7 +1199,16 @@ def choose_task(side, det, maps, deferred, other_claim, busy, spots, put_down=()
         if near_bin(u, v, det, margin=BIN_CLEAR):          # 26 Nov 22:25: also in the last-resort pass (it grabbed a bin)
             no("too close to a bin")
             continue
-        if inside_line(u, v) < LINE_IN - OUTSIDE_PX:   # 27 Nov 19:35 (user): blocks next to / just outside the line too
+        # 27 Nov 19:50 (user: NO line overstepping): the block's whole outline must be inside the line, and no block
+        # outside / on the line may be within jaw reach (the arms touched them twice)
+        half = max(o[5] or 0, o[6] or 0) / 2.0 if len(o) > 6 else 0.0
+        if inside_line(u, v) < max(LINE_IN, half + LINE_EDGE) - OUTSIDE_PX:
+            no("on / outside the black line")
+            continue
+        if any(math.hypot(u - q[1], v - q[2]) < OUT_CLEAR for q in det.get("outside", ())):
+            no("a block outside the line is too close")
+            continue
+        if False:
             # 26 Nov pm (Peter: don't pick up objects outside the space): on or outside the black line = not ours
             # 26 Nov 23:30: measured to the block's EDGE - a block TOUCHING the line is not picked either
             no("on / outside the black line")
@@ -1510,8 +1520,8 @@ def run_both():
             for k, (fa, lb) in enumerate(PROBE_CM[:PROBES]):
                 d = (hdg * fa + left_of * lb) * PX_PER_CM
                 o_pr = (o[0], o[1] + float(d[0]), o[2] + float(d[1])) + tuple(o[3:])
-                if inside_line(o_pr[1], o_pr[2]) < LINE_IN or near_bin(o_pr[1], o_pr[2], det, margin=5):
-                    continue
+                if inside_line(o_pr[1], o_pr[2]) < LINE_IN + 8 or near_bin(o_pr[1], o_pr[2], det, margin=5) or                         any(math.hypot(o_pr[1] - q[1], o_pr[2] - q[2]) < OUT_CLEAR for q in det.get("outside", ())):
+                    continue                     # probes never move towards the line or a block outside it
                 p_pr = plan(o_pr, m, bin_xy)
                 arm.move_to(with_grip(p["low"], hw.GRIP_OPEN), ZONE_SPEED, tol=4, settle=0.05, timeout=1.5)
                 arm.move_to(with_grip(p_pr["low"], hw.GRIP_OPEN), ZONE_SPEED, tol=3, settle=0.05, timeout=1.5)

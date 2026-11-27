@@ -132,7 +132,7 @@ def detect(img):
     bin_zone = cv2.dilate(bin_masks, np.ones((15, 15), np.uint8))
     source = np.zeros(img.shape[:2], np.uint8)
     cv2.fillPoly(source, [SOURCE_POLY], 255)
-    _out = int(float(os.environ.get("SORT_OUTSIDE_PX") or 45))
+    _out = int(float(os.environ.get("SORT_OUTSIDE_PX") or 0))
     if _out > 0:   # 27 Nov 19:35 (user): also blocks just OUTSIDE the line beside the arms (SORT_OUTSIDE_PX=0 = off)
         source = cv2.dilate(source, np.ones((2 * _out + 1, 2 * _out + 1), np.uint8))
     for name in COLOURS:
@@ -149,7 +149,23 @@ def detect(img):
                 (_, _), (w, h), ang = cv2.minAreaRect(c)          # rotation + size only
                 cx, cy = true_centre(c, img.shape)                  # 26 Nov: TRUE centre, not the box centre
                 objects.append((name, cx, cy, ang, a, w, h))
-    return {"table": hull, "bins": bins, "objects": objects}
+    # 27 Nov 19:50 (user: the arms touched blocks outside the line - twice): also report the blocks OUTSIDE the
+    # play area (centre outside the line), so the sorter can keep its jaws away from them
+    outside = []
+    src0 = np.zeros(img.shape[:2], np.uint8)
+    cv2.fillPoly(src0, [SOURCE_POLY], 255)
+    for name in COLOURS:
+        m = colour_mask(hsv, name) & inside & ~bin_zone
+        cnts, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for c in cnts:
+            a = cv2.contourArea(c)
+            if OBJ_MIN_AREA <= a <= OBJ_MAX_AREA:
+                mm = cv2.moments(c)
+                if mm["m00"] > 0:
+                    cx, cy = mm["m10"] / mm["m00"], mm["m01"] / mm["m00"]
+                    if src0[min(int(cy), src0.shape[0] - 1), min(int(cx), src0.shape[1] - 1)] == 0 or                             cv2.pointPolygonTest(SOURCE_POLY, (float(cx), float(cy)), True) < 8:
+                        outside.append((name, cx, cy, a))
+    return {"table": hull, "bins": bins, "objects": objects, "outside": outside}
 
 
 def draw(img, det):
