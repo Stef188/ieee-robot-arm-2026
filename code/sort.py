@@ -474,11 +474,33 @@ def learned_bias(side, min_n=3):
 BIN_MAX_SIDE = float(os.environ.get("SORT_BIN_MAX_SIDE") or 66)   # px: a real bin is never longer than this
 
 
+_KNOWN_BINS = None
+
+
+def known_bin_spots():
+    """27 Nov: the bin spots TAUGHT at the competition (both arms) - always treated as bins, even when a very full bin
+    is not recognised by the camera (its contents looked like loose blocks)."""
+    global _KNOWN_BINS
+    if _KNOWN_BINS is None:
+        _KNOWN_BINS = []
+        for side in ("left", "right"):
+            try:
+                c = json.loads((HERE / f"calib_{side}.json").read_text())
+                _KNOWN_BINS += [(b["u"], b["v"]) for b in c.get("bins", {}).values()
+                                if b and b.get("taught") and str(b.get("time", "")).startswith("2026-11-27")]
+            except Exception:
+                pass
+    return _KNOWN_BINS
+
+
 def near_bin(u, v, det, margin=15):
     """Is top-camera pixel (u, v) on, or within `margin` px of, any bin's outline? 26 Nov pm: measured to the bin's
     real (rotated) rectangle - the old circle (half the longer side) let the corners of a turned bin stick out, and
     the open jaws hit them (Peter: the arms must NEVER touch the bins)."""
     import cv2
+    for bu_, bv_ in ([] if DYNAMIC else known_bin_spots()):      # Round 3: bins move - only what the camera sees
+        if math.hypot(u - bu_, v - bv_) < KNOWN_BIN_R + margin:
+            return True
     for b in det["bins"].values():
         cx, cy, w, h = b[:4]
         w, h = min(w, BIN_MAX_SIDE), min(h, BIN_MAX_SIDE)     # a merged (bin + blocks) outline is cut to a real bin
@@ -915,7 +937,8 @@ DESPERATE_MARGIN = float(os.environ.get("SORT_DESPERATE_MARGIN") or 40)
 BIN_TOUCH = float(os.environ.get("SORT_BIN_TOUCH") or 12)
 BLOCK_DEG = float(os.environ.get("SORT_BLOCK_DEG") or 8)  # arm stopped this far from the grab pose = it HIT something
 #   (a bin, a block, the other arm) - 26 Nov: right-arm grabs stopped 13-52 deg short next to bins
-MISS_LAST = int(os.environ.get("SORT_MISS_LAST") or 4)   # a block missed this often goes behind every other block
+MISS_LAST = int(os.environ.get("SORT_MISS_LAST") or 4)
+KNOWN_BIN_R = float(os.environ.get("SORT_KNOWN_BIN_R") or 28)   # px: radius around a taught bin spot that is "bin"   # a block missed this often goes behind every other block
 SHAPE_RANK = {"pentagonal_prism": 4, "dodecahedron": 3, "cylinder": 2, "cube": 1}   # shape round: picking order
 LINE_EDGE = float(os.environ.get("SORT_LINE_EDGE") or 4)   # px: the block's EDGE (not just its centre) must be this
 #   far inside the black line (26 Nov 23:30: no block touching the line is picked)
@@ -1125,7 +1148,9 @@ def choose_task(side, det, maps, deferred, other_claim, busy, spots, put_down=()
             ev = o[10] if len(o) > 10 else -9
             conf_ok = len(o) > 9 and o[9] >= shape_min(o[8], relaxed=True)
             # 27 Nov: after IDLE_MAX the last-resort pass takes ANY block with positive expected points (no confidence floor)
-            if relax_shape and len(o) > 9 and ((conf_ok and ev >= EV_RELAX) or (desperate and ev > EV_DESPERATE)):
+            # 27 Nov 19:20 (user: "1 s rule, seriously"): after IDLE_MAX an idle arm takes ANY block by its most likely
+            # shape - best expected points first (tasks are sorted by value) - nothing scores while the arm stands still
+            if relax_shape and len(o) > 9 and ((conf_ok and ev >= EV_RELAX) or desperate):
                 import shape_model as SM
                 o = (SM.SHAPE_TO_BIN[o[8]],) + tuple(o[1:])      # nothing sure left: take its best guess
                 colour = o[0]
@@ -1145,7 +1170,7 @@ def choose_task(side, det, maps, deferred, other_claim, busy, spots, put_down=()
             no("on / outside the black line")
             continue
         # 27 Nov: no extra last-resort tries once a block has had 3 (it went back to one cylinder 5 times)
-        if misses_at(deferred, u, v) >= MAX_TRIES + (2 if desperate and MAX_TRIES < 3 else 0):
+        if misses_at(deferred, u, v) >= MAX_TRIES + (3 if desperate else 0):   # idle: go back to given-up blocks
             # 26 Nov 19:00: all of today's runs - first tries work ~40 %, retries ~7 % (15 of ~210); one cube got 13
             # tries in a row. A block is tried at most MAX_TRIES times, then left alone.
             no(f"missed {MAX_TRIES}x - left alone")
