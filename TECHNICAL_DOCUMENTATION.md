@@ -328,7 +328,7 @@ Every run logs `"<arm> arm grasp-pose model: neural network (GraspNet)"` to `sor
 | NumPy | GraspNet, maths | BSD-3 |
 | pyrealsense2 (Intel RealSense SDK) | Top camera | Apache-2.0 |
 | PyTorch | Only inside LeRobot for the earlier ACT/SmolVLA work | BSD-3 |
-| AI coding assistant (Anthropic Claude) | Helped write and debug the code and this document, under the team's direction | n/a |
+| AI coding assistant | Helped write and debug the code and this document, under the team's direction | n/a |
 
 No external datasets were used. All demonstrations were recorded by the team.
 
