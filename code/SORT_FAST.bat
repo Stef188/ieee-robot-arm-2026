@@ -23,7 +23,7 @@ REM 26 Nov 20:00: right-arm trim OFF - its taught grabs are at block centres, th
 set SORT_TRIM_RIGHT=0,0
 REM 27 Nov (competition): left arm base clamped ~6 deg turned vs the lab (6 grabs taught here, fit_offset.py)
 if not defined SORT_PAN_LEFT set SORT_PAN_LEFT=6
-if not defined SORT_PAN_RIGHT set SORT_PAN_RIGHT=0
+if not defined SORT_PAN_RIGHT set SORT_PAN_RIGHT=1
 set SORT_APPROACH_OFFSET=0
 set S=%1
 if "%S%"=="" set S=300
