@@ -102,35 +102,6 @@ def detect_avg(frames):
     return base
 
 
-
-ROUND_RATIO = 1.15    # widest / narrowest width below this = round-ish top (dodecahedron, standing cylinder / prism)
-LONG_RATIO = 1.5      # long side / narrow side at least this = long block (lying cylinder / prism): jaws go across
-
-
-def grasp_geometry(contour):
-    """27 Nov (competition): the jaw direction from the block's real outline, not a bounding box.
-    Width of the (convex) outline in every direction 0-179 deg (like calipers):
-      * long block  (lying cylinder / prism): returns the LONG axis angle, size (long, narrow) -> sort.py closes the
-        jaws ACROSS it (period 180)
-      * square-ish (cube): returns the narrowest = face-to-face direction, size (other, narrow) -> jaws flat on 2 faces
-      * round-ish top (dodecahedron, standing cylinder / prism): returns angle 0 = do NOT turn the wrist
-    Returns (angle deg, w, h) in the same convention as cv2.minAreaRect (w along `angle`)."""
-    pts = cv2.convexHull(contour).reshape(-1, 2).astype(np.float64)
-    th = np.radians(np.arange(0, 180, 1.0))
-    proj = pts @ np.stack([np.cos(th), np.sin(th)])            # (n, 180)
-    width = proj.max(0) - proj.min(0)
-    i = int(width.argmin())
-    w_min, w_max = float(width[i]), float(width.max())
-    w_perp = float(width[(i + 90) % 180])
-    if w_min <= 0:
-        return 0.0, 1.0, 1.0
-    if w_perp / w_min >= LONG_RATIO:
-        return float((i + 90) % 180), w_perp, w_min           # long axis, (long, narrow)
-    if w_max / w_min < ROUND_RATIO:
-        m = (w_min + w_max) / 2
-        return 0.0, m, m                                        # round-ish: no wrist turn needed
-    return float(i), w_perp, w_min                              # square-ish: jaws close along the narrowest direction
-
 def detect(img):
     hsv = cv2.cvtColor(cv2.GaussianBlur(img, (5, 5), 0), cv2.COLOR_BGR2HSV)
     hull = table_hull(hsv)
@@ -171,7 +142,7 @@ def detect(img):
                 mm = cv2.moments(c)
                 if mm["m00"] <= 0 or source[int(mm["m01"] / mm["m00"]), int(mm["m10"] / mm["m00"])] == 0:
                     continue
-                ang, w, h = grasp_geometry(c)                      # 27 Nov: shape-aware jaw direction + size
+                (_, _), (w, h), ang = cv2.minAreaRect(c)          # rotation + size only
                 cx, cy = true_centre(c, img.shape)                  # 26 Nov: TRUE centre, not the box centre
                 objects.append((name, cx, cy, ang, a, w, h))
     return {"table": hull, "bins": bins, "objects": objects}

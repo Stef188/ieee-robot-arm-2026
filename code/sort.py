@@ -915,11 +915,6 @@ DESPERATE_MARGIN = float(os.environ.get("SORT_DESPERATE_MARGIN") or 40)
 BIN_TOUCH = float(os.environ.get("SORT_BIN_TOUCH") or 12)
 BLOCK_DEG = float(os.environ.get("SORT_BLOCK_DEG") or 8)  # arm stopped this far from the grab pose = it HIT something
 #   (a bin, a block, the other arm) - 26 Nov: right-arm grabs stopped 13-52 deg short next to bins
-AIM_LEARN = os.environ.get("SORT_AIM_LEARN", "1") == "1"   # 27 Nov: learn each arm's aim error from pushed blocks
-AIM_PUSH = float(os.environ.get("SORT_AIM_PUSH") or -0.5)    # 27 Nov data: a jaw coming down on a block's edge pushes it
-#   AWAY from the gripper centre (30 left-arm misses: this reading gives "lands ~2 cm RIGHT", as seen at the table)
-AIM_MIN_MOVE = float(os.environ.get("SORT_AIM_MIN_MOVE") or 3)   # px: smaller movement = no information
-AIM_MAX = float(os.environ.get("SORT_AIM_MAX") or 20)        # px (~2.5 cm): never correct more than this
 MISS_LAST = int(os.environ.get("SORT_MISS_LAST") or 4)   # a block missed this often goes behind every other block
 SHAPE_RANK = {"pentagonal_prism": 4, "dodecahedron": 3, "cylinder": 2, "cube": 1}   # shape round: picking order
 LINE_EDGE = float(os.environ.get("SORT_LINE_EDGE") or 4)   # px: the block's EDGE (not just its centre) must be this
@@ -1110,58 +1105,6 @@ def misses_at(deferred, u, v):
     return max([n for d, n in deferred.items() if math.hypot(u - d[0], v - d[1]) < 15], default=0)
 
 
-
-JAW_REACH = float(os.environ.get("SORT_JAW_REACH") or 26)   # px (~3 cm): how far each OPEN jaw tip reaches from the centre
-JAW_CLEAR = float(os.environ.get("SORT_JAW_CLEAR") or 6)    # px: the jaw tips must stay this far from bins / other blocks
-OWN_MARGIN = float(os.environ.get("SORT_OWN_MARGIN") or 15)  # px: a block clearly nearer the OTHER arm's base is its job
-
-
-def _bin_polys(det):
-    import cv2
-    out = []
-    for b in det["bins"].values():
-        cx, cy, w, h = b[:4]
-        w, h = min(w, BIN_MAX_SIDE), min(h, BIN_MAX_SIDE)
-        ang = b[4] if len(b) > 4 else 0.0
-        out.append(cv2.boxPoints(((float(cx), float(cy)), (float(w), float(h)), float(ang))).astype(np.float32))
-    return out
-
-
-def jaw_choice(o, det):
-    """27 Nov (competition): the jaw closing direction that keeps the OPEN jaw tips furthest from bins and neighbouring
-    blocks, among the directions this block's shape allows (vision.grasp_geometry): round top = any direction,
-    square = its two face directions, long = across it only. Returns (direction deg, clearance px, object with it)."""
-    import cv2
-    u, v = float(o[1]), float(o[2])
-    w, h, ang = float(o[5] or 0), float(o[6] or 0), float(o[3] or 0)
-    if shape_of(o) == "long":
-        cands = [(ang if w >= h else ang + 90) + 90]
-    elif abs(w - h) < 1e-6 and ang == 0.0:
-        cands = list(range(0, 180, 15))                       # round-ish: free
-    else:
-        cands = [ang, ang + 90]
-    polys = _bin_polys(det)
-    others = [q for q in det["objects"] if math.hypot(q[1] - u, q[2] - v) > 4]
-    best = None
-    for th in cands:
-        d = np.array([math.cos(math.radians(th)), math.sin(math.radians(th))])
-        c_bin, c_blk = 1e9, 1e9
-        for sgn in (1, -1):
-            tx, ty = u + sgn * JAW_REACH * d[0], v + sgn * JAW_REACH * d[1]
-            for pl in polys:
-                c_bin = min(c_bin, -cv2.pointPolygonTest(pl, (float(tx), float(ty)), True))
-            for q in others:
-                c_blk = min(c_blk, math.hypot(tx - q[1], ty - q[2]) - max(q[5] or 0, q[6] or 0) / 2)
-        # bins are a HARD limit (returned); neighbouring blocks only help choose the direction (a brushed block is
-        # pushed a little, a hit bin is a disaster)
-        score = min(c_bin, c_blk + 15)
-        if best is None or score > best[2]:
-            best = (th, c_bin, score)
-    th, clr, _ = best
-    if shape_of(o) == "long":
-        return th, clr, o                                     # long blocks keep their own convention
-    return th, clr, (o[0], o[1], o[2], float(th % 180)) + tuple(o[4:])
-
 def choose_task(side, det, maps, deferred, other_claim, busy, spots, put_down=(), margin=None, clear=35, why=None,
                 relax_shape=False, desperate=False):
     """Best job for THIS arm. busy = table strips this arm must stay out of (the other arm's current pick, or the one
@@ -1181,8 +1124,7 @@ def choose_task(side, det, maps, deferred, other_claim, busy, spots, put_down=()
         if colour == "?":
             ev = o[10] if len(o) > 10 else -9
             conf_ok = len(o) > 9 and o[9] >= shape_min(o[8], relaxed=True)
-            # 27 Nov (competition): after IDLE_MAX the last-resort pass takes ANY block with positive expected points
-            # (no confidence floor - the arms sat idle for minutes with 13 of 16 blocks "not sure")
+            # 27 Nov: after IDLE_MAX the last-resort pass takes ANY block with positive expected points (no confidence floor)
             if relax_shape and len(o) > 9 and ((conf_ok and ev >= EV_RELAX) or (desperate and ev > EV_DESPERATE)):
                 import shape_model as SM
                 o = (SM.SHAPE_TO_BIN[o[8]],) + tuple(o[1:])      # nothing sure left: take its best guess
@@ -1193,14 +1135,8 @@ def choose_task(side, det, maps, deferred, other_claim, busy, spots, put_down=()
         if colour not in det["bins"]:
             no("no bin of its colour")
             continue
-        if near_bin(u, v, det, margin=3):                  # the block itself is (almost) inside a bin outline
+        if near_bin(u, v, det, margin=BIN_CLEAR):          # 26 Nov 22:25: also in the last-resort pass (it grabbed a bin)
             no("too close to a bin")
-            continue
-        # 27 Nov (competition): turn the jaws so the open tips stay clear of the bins and the neighbouring blocks -
-        # a block near a bin is taken whenever SOME allowed jaw direction keeps both tips clear (no fixed 2.4 cm ban)
-        _th, _clr, o = jaw_choice(o, det)
-        if _clr < JAW_CLEAR:
-            no("jaws would hit a bin")
             continue
         half = max(o[5] or 0, o[6] or 0) / 2.0 if len(o) > 6 else 0.0
         if inside_line(u, v) < max(LINE_IN, half + LINE_EDGE):
@@ -1208,8 +1144,7 @@ def choose_task(side, det, maps, deferred, other_claim, busy, spots, put_down=()
             # 26 Nov 23:30: measured to the block's EDGE - a block TOUCHING the line is not picked either
             no("on / outside the black line")
             continue
-        # 27 Nov (competition): no extra last-resort tries once a block has had 3 - it kept going back to the same
-        # lying cylinder 5 times at the end of a run ("searching the middle for no reason")
+        # 27 Nov: no extra last-resort tries once a block has had 3 (it went back to one cylinder 5 times)
         if misses_at(deferred, u, v) >= MAX_TRIES + (2 if desperate and MAX_TRIES < 3 else 0):
             # 26 Nov 19:00: all of today's runs - first tries work ~40 %, retries ~7 % (15 of ~210); one cube got 13
             # tries in a row. A block is tried at most MAX_TRIES times, then left alone.
@@ -1234,14 +1169,13 @@ def choose_task(side, det, maps, deferred, other_claim, busy, spots, put_down=()
         near = math.hypot(u - ARM_BASE_PX[side][0], v - ARM_BASE_PX[side][1]) < NEAR_BASE   # right by this arm's base
         by_bin = near_bin(u, v, det, margin=BIN_LAST)        # close-ish to a bin: taken, but after everything else
         if has_me:
-            # 27 Nov (competition): the arm whose BASE is nearer takes it (the left arm kept reaching into the right
-            # arm's side). When this arm has been idle (last-resort pass) and the other arm is busy elsewhere, it takes
-            # the block anyway - conflict prevention (busy strips) still applies below.
+            # 27 Nov: the arm whose BASE is nearer takes it; an idle arm (last-resort pass) takes it anyway when the other
+            # arm is busy elsewhere - conflict prevention (busy strips) still applies
             d_me = math.hypot(u - ARM_BASE_PX[side][0], v - ARM_BASE_PX[side][1])
             d_ot = math.hypot(u - ARM_BASE_PX[other][0], v - ARM_BASE_PX[other][1])
-            if has_other and other_reach and d_ot < d_me - OWN_MARGIN and not (desperate and other_claim is not None):
+            if has_other and other_reach and d_ot < d_me - 15 and not (desperate and other_claim is not None):
                 no("the other arm's job")
-                continue                                   # both have this bin: the nearer arm does it
+                continue
             tasks.append(dict(kind="sort", o=o, bin_xy=(bu, bv), score=m.reach(u, v), misses=n, near=near, by_bin=by_bin,
                               iv=strip(side, (u, v), (bu, bv))))
         elif not has_other or other_reach:
@@ -1329,12 +1263,6 @@ def run_both():
     deferred = {}
     put_down = []                               # where hand-offs put blocks down (never handed off again from there)
     stats = {"done": 0, "handed": 0, "miss": 0, "wait_s": 0.0}
-    # 27 Nov (competition): each arm LEARNS its aim error during the run. When the jaws close off-centre they push the
-    # block towards the gripper's real centre, so a block that moved after a miss shows where the gripper really
-    # landed: landing point = block before + movement / AIM_PUSH. Every later grab of that arm is aimed that much the
-    # other way (towards the block's centre). A miss that did not move the block gives no information.
-    aim_err = {"left": np.zeros(2), "right": np.zeros(2)}
-    last_miss = {"left": None, "right": None}
     stop = threading.Event()
     last_rec = {}
     run_id = time.strftime("%Y%m%d_%H%M%S")
@@ -1429,24 +1357,6 @@ def run_both():
         if lb is not None and not near_bin(o[1] + lb[0], o[2] + lb[1], det):
             o = (o[0], o[1] + lb[0], o[2] + lb[1]) + tuple(o[3:])
         tr = trim_px(side)
-        learned_now = False
-        lm = last_miss.get(side)
-        if lm is not None and AIM_LEARN:
-            b0, a0 = lm
-            mv = np.array([orig[1] - b0[0], orig[2] - b0[1]], float)
-            if np.linalg.norm(mv) < 25:                                  # the same block came round again
-                last_miss[side] = None
-                if np.linalg.norm(mv) > AIM_MIN_MOVE:
-                    landed = np.asarray(b0, float) + mv / AIM_PUSH          # where the gripper really came down
-                    err = landed - np.asarray(a0, float)                    # vs where it aimed
-                    new = 0.7 * aim_err[side] + 0.3 * err      # single misses scatter: learn gradually
-                    nrm = np.linalg.norm(new)
-                    aim_err[side] = new * min(1.0, AIM_MAX / nrm) if nrm > 0 else new
-                    learned_now = True
-                    say(side, f"   the miss pushed the block {np.linalg.norm(mv):.0f} px -> the gripper lands "
-                              f"({err[0]:+.0f},{err[1]:+.0f}) px off its aim; this arm now corrects by "
-                              f"({-aim_err[side][0]:+.0f},{-aim_err[side][1]:+.0f}) px")
-        tr = tr - aim_err[side]
         bu, bv = ARM_BASE_PX[side]
         hdg = np.array([o[1] - bu, o[2] - bv], float)
         hdg /= (np.linalg.norm(hdg) + 1e-9)
@@ -1454,7 +1364,7 @@ def run_both():
         jo = JAW_OFFSET.get(side, 0.0)
         if jo:
             tr = tr - left_of * jo * PX_PER_CM
-        if n and not learned_now:                          # retry: nudge the grab 1 cm, a different way each time
+        if n:                                              # retry: nudge the grab 1 cm, a different way each time
             # 26 Nov pm: the right arm's 7th try nudged 1 cm TOWARDS a red cube 2 cm away, grabbed the red cube and
             # put it in the yellow bin. A nudge may never bring the jaws closer to another block (or the line):
             others = [(q[1], q[2]) for q in det["objects"] if math.hypot(q[1] - orig[1], q[2] - orig[2]) > 6]
@@ -1741,9 +1651,6 @@ def run_both():
                     pass                                     # Round 3: the judge moved it - not a miss
                 else:
                     stats["miss"] += 1
-                    r_ = last_rec.get(side) or {}
-                    if "u_aim" in r_:
-                        last_miss[side] = ((r_["u"], r_["v"]), (r_["u_aim"], r_["v_aim"]))
                     key = next((d for d in deferred if math.hypot(o[1] - d[0], o[2] - d[1]) < 15), (o[1], o[2]))
                     deferred[key] = deferred.get(key, 0) + (99 if result == "blocked" else 1)
         say(side, "time is up (no new picks in the last %.0f s, so everything is finished at the end)" % FINISH_S if time.time() >= t_end - FINISH_S else "stopped")
