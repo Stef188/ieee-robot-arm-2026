@@ -36,8 +36,18 @@ SOURCE_POLY = np.array([(197, 212), (524, 216), (519, 300), (513, 360), (508, 39
                         (250, 386), (197, 384)], np.int32)
 
 
+TABLE_V = 165   # lab table brightness threshold (25 Nov)
+
+
 def table_hull(hsv):
-    white = cv2.inRange(hsv, (0, 0, 165), (179, 60, 255))
+    # 27 Nov (competition): their table is greyer/darker (median V ~148 inside the line vs well over 165 in the lab) -
+    # the threshold now follows the table's own brightness, measured inside the black line
+    src = np.zeros(hsv.shape[:2], np.uint8)
+    cv2.fillPoly(src, [SOURCE_POLY], 255)
+    src = cv2.erode(src, np.ones((25, 25), np.uint8))
+    vals = hsv[..., 2][src > 0]
+    vthr = TABLE_V if vals.size == 0 else int(min(TABLE_V, max(90, np.median(vals) - 35)))
+    white = cv2.inRange(hsv, (0, 0, vthr), (179, 60, 255))
     white = cv2.morphologyEx(white, cv2.MORPH_CLOSE, np.ones((15, 15), np.uint8))
     n, lab, stats, _ = cv2.connectedComponentsWithStats(white)
     if n < 2:
@@ -99,12 +109,20 @@ def detect(img):
     if hull is not None:
         cv2.fillPoly(inside, [hull], 255)
         inside = cv2.erode(inside, np.ones((9, 9), np.uint8))
+    # 27 Nov (competition): the area inside the black line (+ 3 cm) ALWAYS counts as table, whatever the table colour
+    _src = np.zeros(img.shape[:2], np.uint8)
+    cv2.fillPoly(_src, [SOURCE_POLY], 255)
+    _near_line = cv2.dilate(_src, np.ones((31, 31), np.uint8))
+    inside |= _near_line
     bins, objects = {}, []
     bin_masks = np.zeros(img.shape[:2], np.uint8)
     for name in COLOURS:
         m = colour_mask(hsv, name) & inside
         cnts, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         big = [c for c in cnts if cv2.contourArea(c) >= BIN_MIN_AREA]
+        # 27 Nov (competition): a bin must stand inside / right at the black line - not a blue bag next to the table
+        big = [c for c in big if _near_line[min(479, max(0, int(cv2.minAreaRect(c)[0][1]))),
+                                            min(639, max(0, int(cv2.minAreaRect(c)[0][0])))] > 0]
         if big:
             c = max(big, key=cv2.contourArea)
             (cx, cy), (w, h), ang = cv2.minAreaRect(c)
