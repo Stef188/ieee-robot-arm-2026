@@ -60,6 +60,9 @@ def main():
             key = f"{r['run']}:{r['side']}:{r['t']}"
             if r["side"] != side or key in used or int(r.get("tries") or 1) > 1:
                 continue        # retries are nudged 1 cm (not recorded) - only first tries are clean examples
+            if str(r.get("time", "")) >= "2026-11-27" and "--comp" not in sys.argv:
+                continue        # 27 Nov: competition-table grabs carry the arm TURN correction (SORT_PAN_*) - learning
+                                # them as lab examples would apply that correction twice (comp_geometry.py uses them)
             q = np.array(r["q_grasp"][:5], float)
             up = np.array(r["up"][:5], float)
             q = q + float(r.get("deep") or 0.0) * up          # undo the deep grip -> demo grab-height convention

@@ -834,7 +834,9 @@ BIN_MEMORY = os.environ.get("SORT_BIN_MEMORY", "0" if DYNAMIC else "1") == "1"  
 #   where it was last seen
 WIDE_MARGIN = float(os.environ.get("SORT_WIDE_MARGIN") or 25)   # px: when an arm has nothing else, it also takes blocks
 #   this far outside its demo area (normal: 25). 26 Nov pm: the idle left arm had red blocks at -30 and -33 px.
-NUDGE_CM = [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)]   # retry n of a missed block: (further from the arm, to its left)
+# 27 Nov (competition): after the turn correction the misses are SIDEWAYS scatter (~1 cm, either side) - so a retry
+# searches sideways first (right, then left, as seen from the arm), then further / closer
+NUDGE_CM = [(0, 0), (0, -1), (0, 1), (1, 0), (-1, 0)]   # retry n of a missed block: (further from the arm, to its left)
 NUDGE_CLEAR = float(os.environ.get("SORT_NUDGE_CLEAR") or 24)   # px (~3 cm): a nudged grab stays this far from other blocks
 LINE_IN = float(os.environ.get("SORT_LINE_IN") or 5)     # px: a block's centre must be this far INSIDE the black line
 LINE_NEAR = float(os.environ.get("SORT_LINE_NEAR") or 30)   # px: "near the line" (a miss can push it over)

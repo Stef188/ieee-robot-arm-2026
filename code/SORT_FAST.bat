@@ -24,6 +24,8 @@ set SORT_TRIM_RIGHT=0,0
 REM 27 Nov (competition): left arm base clamped ~6 deg turned vs the lab (6 grabs taught here, fit_offset.py)
 if not defined SORT_PAN_LEFT set SORT_PAN_LEFT=6
 if not defined SORT_PAN_RIGHT set SORT_PAN_RIGHT=1
+REM 27 Nov (competition): 3 tries per block - retries search 1 cm right, then left (sideways scatter)
+if not defined SORT_MAX_TRIES set SORT_MAX_TRIES=3
 set SORT_APPROACH_OFFSET=0
 set S=%1
 if "%S%"=="" set S=300
